@@ -1,1 +1,69 @@
+= casket-ssg
+:toc: auto
+:toclevels: 3
 
+**The definitive Haskell static site generator.**
+
+== Overview
+
+casket-ssg is a pure functional static site generator written in Haskell.
+It leverages Haskell's strong type system to provide compile-time guarantees
+about site structure and content generation.
+
+== Language Enforcement
+
+[IMPORTANT]
+====
+This SSG **MUST** be written in Haskell. No exceptions.
+
+Forbidden languages for SSG logic:
+
+* Python
+* JavaScript/TypeScript
+* Ruby, Go, Java
+* Any language other than Haskell
+
+The **ONLY** non-Haskell code allowed is the ReScript MCP adapter in `adapters/`.
+====
+
+== Features
+
+* Pure functional design with no side effects in core logic
+* Strong type system prevents runtime errors
+* Composable content transformations with monads
+* Lazy evaluation for efficient large site builds
+* Pandoc integration for markdown processing
+
+== Requirements
+
+* GHC 9.0+
+* Cabal or Stack
+
+== Building
+
+[source,bash]
+----
+cabal build
+cabal run casket-ssg -- build
+----
+
+== Project Structure
+
+[source]
+----
+casket-ssg/
+├── src/                  # Haskell source (THE SSG)
+├── adapters/             # ReScript MCP adapter only
+├── STATE.scm             # Project state
+├── ECOSYSTEM.scm         # Ecosystem position
+├── META.scm              # Architecture decisions
+└── .claude/CLAUDE.md     # AI guidelines
+----
+
+== Part of poly-ssg
+
+casket-ssg is a satellite of the https://github.com/hyperpolymath/poly-ssg-mcp[poly-ssg-mcp] hub.
+
+== License
+
+AGPL-3.0-or-later
