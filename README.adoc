@@ -1,68 +1,71 @@
 = casket-ssg
 :toc: auto
-:toclevels: 3
+:toclevels: 2
 
-**The definitive Haskell static site generator.**
+**Pure functional static site generator in Haskell.**
 
-== Overview
+== Who Is This For?
 
-casket-ssg is a pure functional static site generator written in Haskell.
-It leverages Haskell's strong type system to provide compile-time guarantees
-about site structure and content generation.
+* **Haskell developers** who want to build sites with tools they know and love
+* **Functional programming enthusiasts** who appreciate compositional design
+* **Teams requiring reliability** where type safety prevents runtime surprises
+* **Anyone frustrated** by dynamic language site builders that fail at deploy time
 
-== Language Enforcement
+== Why casket-ssg?
 
-[IMPORTANT]
-====
-This SSG **MUST** be written in Haskell. No exceptions.
+=== Type Safety That Matters
 
-Forbidden languages for SSG logic:
+Your site structure is checked at compile time. Missing templates, broken links, malformed frontmatter - all caught before deployment, not discovered by users.
 
-* Python
-* JavaScript/TypeScript
-* Ruby, Go, Java
-* Any language other than Haskell
+=== Composable Pipelines
 
-The **ONLY** non-Haskell code allowed is the ReScript MCP adapter in `adapters/`.
-====
+Content transformations compose like functions should. Chain markdown processing, templating, and asset handling with confidence that types align.
 
-== Features
+=== Lazy Large-Site Builds
 
-* Pure functional design with no side effects in core logic
-* Strong type system prevents runtime errors
-* Composable content transformations with monads
-* Lazy evaluation for efficient large site builds
-* Pandoc integration for markdown processing
+Haskell's lazy evaluation means casket-ssg only processes what's needed. Incremental builds are natural, not bolted on.
 
-== Requirements
+=== Pandoc Integration
 
-* GHC 9.0+
-* Cabal or Stack
+Best-in-class document conversion with full Pandoc support. Markdown, reStructuredText, Org-mode - your content, your format.
 
-== Building
+== Quick Start
 
 [source,bash]
 ----
-cabal build
-cabal run casket-ssg -- build
+# Install
+cabal update
+cabal install casket-ssg
+
+# Create a site
+casket-ssg init my-site
+cd my-site
+
+# Build
+casket-ssg build
+
+# Preview locally
+casket-ssg serve
 ----
 
-== Project Structure
+== Features
 
-[source]
-----
-casket-ssg/
-├── src/                  # Haskell source (THE SSG)
-├── adapters/             # ReScript MCP adapter only
-├── STATE.scm             # Project state
-├── ECOSYSTEM.scm         # Ecosystem position
-├── META.scm              # Architecture decisions
-└── .claude/CLAUDE.md     # AI guidelines
-----
+* **Compile-time template validation** - broken templates don't build
+* **Strong frontmatter types** - YAML parsing with schema enforcement
+* **Asset pipeline** - CSS/JS processing with hash-based cache busting
+* **Incremental builds** - only rebuild what changed
+* **Live reload** - instant preview during development
+* **RSS/Atom feeds** - generated automatically from content
+* **Sitemap generation** - SEO-ready output
+
+== Requirements
+
+* GHC 9.0 or later
+* Cabal 3.0 or Stack 2.0
 
 == Part of poly-ssg
 
-casket-ssg is a satellite of the https://github.com/hyperpolymath/poly-ssg-mcp[poly-ssg-mcp] hub.
+casket-ssg is part of the https://github.com/hyperpolymath/poly-ssg[poly-ssg] family of language-native static site generators, unified through https://github.com/hyperpolymath/poly-ssg-mcp[MCP integration].
 
 == License
 
