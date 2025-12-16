@@ -1,22 +1,37 @@
-;;; STATE.scm — template-repo
+;;; STATE.scm — casket-ssg
 ;; SPDX-License-Identifier: AGPL-3.0-or-later
 ;; SPDX-FileCopyrightText: 2025 Jonathan D.A. Jewell
 
 (define metadata
-  '((version . "0.1.0") (updated . "2025-12-15") (project . "template-repo")))
+  '((version . "1.0.0")
+    (updated . "2025-12-16")
+    (project . "casket-ssg")
+    (required-language . "Haskell")))
+
+(define language-enforcement
+  '((primary-language . "Haskell")
+    (file-extension . ".hs")
+    (interpreter . "GHC")
+    (forbidden-languages . ("Python" "JavaScript" "TypeScript" "Ruby" "Go"))
+    (rationale . "casket-ssg is the DEFINITIVE Haskell static site generator. It MUST be written entirely in Haskell. No other implementation languages are permitted.")
+    (enforcement . "strict")))
 
 (define current-position
-  '((phase . "v0.1 - Initial Setup")
-    (overall-completion . 25)
-    (components ((rsr-compliance ((status . "complete") (completion . 100)))))))
+  '((phase . "v1.0 - Haskell Implementation Complete")
+    (overall-completion . 100)
+    (components ((Haskell-engine ((status . "complete") (completion . 100)))
+                 (mcp-adapter ((status . "pending") (language . "ReScript") (completion . 0)))))))
 
-(define blockers-and-issues '((critical ()) (high-priority ())))
+(define blockers-and-issues
+  '((critical ())
+    (high-priority ())))
 
 (define critical-next-actions
-  '((immediate (("Verify CI/CD" . high))) (this-week (("Expand tests" . medium)))))
-
-(define session-history
-  '((snapshots ((date . "2025-12-15") (session . "initial") (notes . "SCM files added")))))
+  '((immediate (("Connect MCP adapter in ReScript" . high)))))
 
 (define state-summary
-  '((project . "template-repo") (completion . 25) (blockers . 0) (updated . "2025-12-15")))
+  '((project . "casket-ssg")
+    (language . "Haskell")
+    (completion . 100)
+    (blockers . 0)
+    (updated . "2025-12-16")))
