@@ -2,6 +2,10 @@
 :toc: auto
 :toclevels: 2
 
+image:https://img.shields.io/badge/RSR-compliant-gold[RSR Compliant,link=https://github.com/hyperpolymath/rhodium-standard-repositories]
+image:https://img.shields.io/badge/poly--ssg-satellite-blue[poly-ssg,link=https://github.com/hyperpolymath/poly-ssg]
+image:https://img.shields.io/badge/license-AGPL--3.0-green[License]
+
 **Pure functional static site generator in Haskell.**
 
 == Who Is This For?
