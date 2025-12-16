@@ -1,51 +1,65 @@
-# SSG Adapters
+# MCP Adapter for casket-ssg
 
-These adapters are synchronized from the [poly-ssg-mcp](https://github.com/hyperpolymath/poly-ssg-mcp) hub.
+This directory contains the **ReScript MCP adapter** that connects casket-ssg to the poly-ssg-mcp hub.
 
-## Usage
+## Structure
 
-Each adapter wraps a specific static site generator CLI and exposes it via the MCP protocol.
-
-## Available Adapters
-
-| Adapter | Language | SSG |
-|---------|----------|-----|
-| babashka.js | Clojure | Babashka |
-| cobalt.js | Rust | Cobalt |
-| coleslaw.js | Common Lisp | Coleslaw |
-| cryogen.js | Clojure | Cryogen |
-| documenter.js | Julia | Documenter.jl |
-| ema.js | Haskell | Ema |
-| fornax.js | F# | Fornax |
-| franklin.js | Julia | Franklin.jl |
-| frog.js | Racket | Frog |
-| hakyll.js | Haskell | Hakyll |
-| laika.js | Scala | Laika |
-| marmot.js | Crystal | Marmot |
-| mdbook.js | Rust | mdBook |
-| nimble-publisher.js | Elixir | NimblePublisher |
-| nimrod.js | Nim | Nimrod |
-| orchid.js | Kotlin | Orchid |
-| perun.js | Clojure | Perun |
-| pollen.js | Racket | Pollen |
-| publish.js | Swift | Publish |
-| reggae.js | D | Reggae |
-| scalatex.js | Scala | ScalaTex |
-| serum.js | Elixir | Serum |
-| staticwebpages.js | Julia | StaticWebPages.jl |
-| tableau.js | Elixir | Tableau |
-| wub.js | Tcl | Wub |
-| yocaml.js | OCaml | YOCaml |
-| zola.js | Rust | Zola |
-| zotonic.js | Erlang | Zotonic |
-
-## Synchronization
-
-To update these adapters from the hub:
-
-```bash
-~/Documents/scripts/transfer-ssg-adapters.sh --satellite $(basename $(pwd))
+```
+adapters/
+├── src/
+│   └── CasketAdapter.res  # ReScript adapter source
+├── package.json        # Node dependencies
+├── rescript.json       # ReScript configuration
+└── README.md
 ```
 
+## Building
+
+```bash
+npm install
+npm run build
+```
+
+## Why ReScript?
+
+The MCP adapter is the **ONLY** place non-native language code is allowed in this satellite.
+ReScript was chosen because:
+
+1. Type-safe JavaScript interop
+2. Compiles to clean ES6 modules
+3. Part of the RSR Tier 1 language set
+4. Consistent across all poly-ssg satellites
+
+## Native Language
+
+**casket-ssg uses Haskell** as its primary implementation language.
+The adapter wraps the Haskell runtime to provide MCP protocol access.
+
+## Connection to Hub
+
+This adapter exports:
+- `name` - Satellite identifier
+- `language` - Primary implementation language (Haskell)
+- `description` - Human-readable description
+- `connect()` - Establish connection
+- `disconnect()` - Close connection
+- `isConnected()` - Check status
+- `tools` - Array of MCP tools
+
+## Language Enforcement
+
+**IMPORTANT**: The adapter is for hub communication only.
+ALL SSG logic must remain in Haskell.
+The adapter may ONLY:
+- Execute commands in the Haskell runtime
+- Parse command output
+- Report results to the hub
+
+The adapter may NOT:
+- Contain SSG logic
+- Generate HTML/content
+- Parse markdown
+- Make routing decisions
+
 ---
-*Synced from poly-ssg-mcp hub*
+*Part of the poly-ssg satellite network*
