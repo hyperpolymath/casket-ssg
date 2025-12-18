@@ -1,0 +1,31 @@
+cabal-version:      3.0
+name:               casket-ssg
+version:            1.0.0
+synopsis:           Pure functional static site generator in Haskell
+description:        casket-ssg is the DEFINITIVE Haskell static site generator.
+                    Part of the poly-ssg satellite constellation.
+license:            AGPL-3.0-or-later
+license-file:       LICENSE.txt
+author:             Jonathan D.A. Jewell
+maintainer:         security@hyperpolymath.org
+category:           Web
+build-type:         Simple
+extra-doc-files:    README.adoc
+
+common warnings
+    ghc-options: -Wall
+
+executable casket-ssg
+    import:           warnings
+    main-is:          Casket.hs
+    hs-source-dirs:   src
+    default-language: Haskell2010
+    build-depends:    base ^>=4.17 || ^>=4.18 || ^>=4.19
+
+test-suite casket-ssg-test
+    import:           warnings
+    type:             exitcode-stdio-1.0
+    main-is:          Casket.hs
+    hs-source-dirs:   src
+    default-language: Haskell2010
+    build-depends:    base ^>=4.17 || ^>=4.18 || ^>=4.19
