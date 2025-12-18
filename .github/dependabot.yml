@@ -1,10 +1,9 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# Dependabot configuration for RSR-compliant repositories
-# Covers common ecosystems - remove unused ones for your project
+# Dependabot configuration for casket-ssg (Haskell SSG)
 
 version: 2
 updates:
-  # GitHub Actions - always include
+  # GitHub Actions - always include for RSR compliance
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -14,35 +13,12 @@ updates:
         patterns:
           - "*"
 
-  # Rust/Cargo
-  - package-ecosystem: "cargo"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-patch"]
-
-  # Elixir/Mix
-  - package-ecosystem: "mix"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-
-  # Node.js/npm
+  # Node.js/npm - for ReScript MCP adapter in adapters/
   - package-ecosystem: "npm"
-    directory: "/"
+    directory: "/adapters"
     schedule:
       interval: "weekly"
-
-  # Python/pip
-  - package-ecosystem: "pip"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-
-  # Nix flakes
-  - package-ecosystem: "nix"
-    directory: "/"
-    schedule:
-      interval: "weekly"
+    groups:
+      npm-dependencies:
+        patterns:
+          - "*"

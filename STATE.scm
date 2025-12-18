@@ -4,7 +4,7 @@
 
 (define metadata
   '((version . "1.0.0")
-    (updated . "2025-12-16")
+    (updated . "2025-12-18")
     (project . "casket-ssg")
     (required-language . "Haskell")))
 
@@ -17,21 +17,25 @@
     (enforcement . "strict")))
 
 (define current-position
-  '((phase . "v1.0 - Haskell Implementation Complete")
-    (overall-completion . 100)
+  '((phase . "v1.0 - Core Complete, Adapter In Progress")
+    (overall-completion . 85)
     (components ((Haskell-engine ((status . "complete") (completion . 100)))
-                 (mcp-adapter ((status . "pending") (language . "ReScript") (completion . 0)))))))
+                 (mcp-adapter ((status . "scaffolded") (language . "ReScript") (completion . 70)))
+                 (ci-pipeline ((status . "complete") (completion . 100)))
+                 (security-policy ((status . "complete") (completion . 100)))))))
 
 (define blockers-and-issues
   '((critical ())
     (high-priority ())))
 
 (define critical-next-actions
-  '((immediate (("Connect MCP adapter in ReScript" . high)))))
+  '((immediate (("Complete MCP adapter integration tests" . high)
+                ("Add file watching capability" . medium)
+                ("Implement RSS feed generation" . medium)))))
 
 (define state-summary
   '((project . "casket-ssg")
     (language . "Haskell")
-    (completion . 100)
+    (completion . 85)
     (blockers . 0)
-    (updated . "2025-12-16")))
+    (updated . "2025-12-18")))
