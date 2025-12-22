@@ -1,0 +1,71 @@
+#!/bin/bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# casket-ssg pre-push hook
+#
+# Install: git config core.hooksPath .githooks
+# Or copy to .git/hooks/pre-push
+
+set -e
+
+echo "Running pre-push checks..."
+
+# ============================================================================
+# Full Test Suite
+# ============================================================================
+if command -v cabal >/dev/null 2>&1; then
+    echo "→ Running full test suite..."
+
+    cabal test all || {
+        echo "❌ Tests failed"
+        exit 1
+    }
+
+    cabal run casket-ssg -- test-markdown >/dev/null || {
+        echo "❌ Markdown test failed"
+        exit 1
+    }
+
+    cabal run casket-ssg -- test-frontmatter >/dev/null || {
+        echo "❌ Frontmatter test failed"
+        exit 1
+    }
+
+    cabal run casket-ssg -- test-full >/dev/null || {
+        echo "❌ Full test failed"
+        exit 1
+    }
+
+    echo "✓ All tests passed"
+fi
+
+# ============================================================================
+# SCM Files Check
+# ============================================================================
+echo "→ Checking SCM files..."
+
+scm_files=("STATE.scm" "META.scm" "ECOSYSTEM.scm" "ROADMAP.scm")
+for f in "${scm_files[@]}"; do
+    if [ ! -f "$f" ]; then
+        echo "⚠️  Missing SCM file: $f"
+    fi
+done
+echo "✓ SCM files checked"
+
+# ============================================================================
+# Security Files Check
+# ============================================================================
+echo "→ Checking security files..."
+
+if [ ! -f "SECURITY.md" ]; then
+    echo "❌ SECURITY.md missing"
+    exit 1
+fi
+
+if [ ! -f ".well-known/security.txt" ]; then
+    echo "❌ .well-known/security.txt missing"
+    exit 1
+fi
+echo "✓ Security files present"
+
+echo ""
+echo "✓ Pre-push checks passed"

@@ -1,0 +1,671 @@
+= casket-ssg Cookbook
+:toc: left
+:toclevels: 3
+:sectnums:
+:icons: font
+:source-highlighter: rouge
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2025 Jonathan D.A. Jewell
+
+== Overview
+
+This cookbook provides comprehensive recipes for building, testing, and deploying casket-ssg.
+All examples assume you have GHC 9.0+ and Cabal 3.0+ installed.
+
+IMPORTANT: casket-ssg is written in *Haskell only*. The ReScript adapter in `adapters/` is the sole exception.
+
+== Quick Reference
+
+[cols="1,2,2"]
+|===
+|Task |Just Command |Raw Command
+
+|Build
+|`just build`
+|`cabal build all`
+
+|Test
+|`just test`
+|`cabal test all`
+
+|Clean
+|`just clean`
+|`cabal clean`
+
+|REPL
+|`just repl`
+|`cabal repl`
+|===
+
+[[cli]]
+== CLI Commands
+
+=== Basic Invocation
+
+[source,bash]
+----
+# Run casket-ssg directly
+cabal run casket-ssg -- <command>
+
+# After building, use the executable
+./dist-newstyle/.../casket-ssg <command>
+----
+
+=== Available Commands
+
+[source,bash]
+----
+# Show help
+cabal run casket-ssg
+
+# Test markdown parser
+cabal run casket-ssg -- test-markdown
+
+# Test frontmatter parser
+cabal run casket-ssg -- test-frontmatter
+
+# Full integration test
+cabal run casket-ssg -- test-full
+----
+
+=== CLI Combinatorics
+
+==== Build Variants
+
+[source,bash]
+----
+# Development build (default)
+cabal build all
+
+# Optimized release build
+cabal build all -O2
+
+# With profiling
+cabal build all --enable-profiling
+
+# With coverage
+cabal build all --enable-coverage
+
+# Parallel build (N cores)
+cabal build all -j4
+
+# Verbose output
+cabal build all -v
+
+# Combined: release + parallel + verbose
+cabal build all -O2 -j4 -v
+----
+
+==== Test Variants
+
+[source,bash]
+----
+# All tests
+cabal test all
+
+# Specific test suite
+cabal test casket-ssg-test
+
+# With output
+cabal test all --test-show-details=always
+
+# Fail fast
+cabal test all --test-option=--fail-fast
+
+# With coverage report
+cabal test all --enable-coverage
+
+# Combined: verbose + details
+cabal test all -v --test-show-details=streaming
+----
+
+==== Run Variants
+
+[source,bash]
+----
+# Basic run
+cabal run casket-ssg
+
+# With arguments
+cabal run casket-ssg -- test-markdown
+
+# With profiling
+cabal run casket-ssg --enable-profiling -- test-full +RTS -p
+
+# With GHC RTS options
+cabal run casket-ssg -- test-full +RTS -N4 -H1G
+----
+
+[[just]]
+== Just Recipes
+
+=== Installation
+
+[source,bash]
+----
+# macOS
+brew install just
+
+# Linux (cargo)
+cargo install just
+
+# Nix
+nix-env -iA nixpkgs.just
+----
+
+=== Build Recipes
+
+[source,bash]
+----
+# Development build
+just build
+
+# Release build with optimizations
+just release
+
+# Clean all artifacts
+just clean
+
+# Clean and rebuild
+just rebuild
+
+# Update dependencies
+just deps
+----
+
+=== Test Recipes
+
+[source,bash]
+----
+# Run cabal tests
+just test
+
+# Test markdown parser
+just test-markdown
+
+# Test frontmatter parser
+just test-frontmatter
+
+# Full integration test
+just test-full
+
+# End-to-end tests
+just test-e2e
+
+# ALL tests (comprehensive)
+just test-all
+----
+
+=== Development Recipes
+
+[source,bash]
+----
+# Start GHCi REPL
+just repl
+
+# Watch mode (requires ghcid)
+just watch
+
+# Run with arguments
+just run test-markdown
+just run build content/
+
+# Generate documentation
+just docs
+just docs-open
+----
+
+=== CI/CD Recipes
+
+[source,bash]
+----
+# Run CI checks locally
+just ci
+
+# Pre-commit checks
+just pre-commit
+
+# Verify language purity
+just language-check
+
+# Full release preparation
+just release-prep
+----
+
+=== Linting & Formatting
+
+[source,bash]
+----
+# Lint Haskell with HLint
+just lint
+
+# Format with fourmolu
+just fmt
+
+# Check formatting (no modify)
+just fmt-check
+
+# Lint ReScript adapter
+just lint-adapter
+----
+
+=== Adapter Recipes
+
+[source,bash]
+----
+# Build ReScript MCP adapter
+just adapter-build
+
+# Watch mode for adapter
+just adapter-watch
+
+# Clean adapter
+just adapter-clean
+----
+
+=== Utility Recipes
+
+[source,bash]
+----
+# Show project info
+just info
+
+# Verify toolchain
+just toolchain
+
+# Install dev tools
+just setup
+----
+
+=== Recipe Combinations
+
+[source,bash]
+----
+# Full development cycle
+just deps && just build && just test-all && just lint
+
+# Quick iteration
+just rebuild && just test
+
+# Pre-push verification
+just ci && just language-check
+
+# Release workflow
+just test-all && just lint && just release-prep
+----
+
+[[nickel]]
+== Nickel Formulae
+
+Nickel can be used for configuration validation and generation.
+
+=== Site Configuration Schema
+
+[source,nickel]
+----
+# casket-config.ncl
+{
+  SiteConfig = {
+    title : String,
+    baseUrl : String,
+    author : String,
+    description : String | optional,
+    language : String | default = "en",
+  },
+
+  # Validate configuration
+  validate : SiteConfig -> Bool = fun config =>
+    config.title != "" && config.baseUrl != "",
+
+  # Default configuration
+  default : SiteConfig = {
+    title = "My Site",
+    baseUrl = "https://example.com",
+    author = "Anonymous",
+    language = "en",
+  },
+}
+----
+
+=== Frontmatter Schema
+
+[source,nickel]
+----
+# frontmatter.ncl
+{
+  Frontmatter = {
+    title : String,
+    date : String | optional,
+    tags : Array String | default = [],
+    draft : Bool | default = false,
+    template : String | default = "default",
+  },
+
+  # Parse YAML-like frontmatter
+  validate : Frontmatter -> Bool = fun fm =>
+    fm.title != "",
+}
+----
+
+=== Build Configuration
+
+[source,nickel]
+----
+# build-config.ncl
+{
+  BuildConfig = {
+    sourceDir : String | default = "content",
+    outputDir : String | default = "_site",
+    templateDir : String | default = "templates",
+    clean : Bool | default = true,
+    parallel : Bool | default = false,
+  },
+
+  # Production configuration
+  production : BuildConfig = {
+    sourceDir = "content",
+    outputDir = "_site",
+    clean = true,
+    parallel = true,
+  },
+
+  # Development configuration
+  development : BuildConfig = {
+    sourceDir = "content",
+    outputDir = "_dev",
+    clean = false,
+    parallel = false,
+  },
+}
+----
+
+=== Nickel + Just Integration
+
+[source,bash]
+----
+# Validate config before build
+nickel export casket-config.ncl | just run build
+
+# Generate configuration
+nickel eval build-config.ncl --field production > .casket-build.json
+----
+
+[[workflows]]
+== Common Workflows
+
+=== New Project Setup
+
+[source,bash]
+----
+# 1. Clone repository
+git clone https://github.com/hyperpolymath/casket-ssg.git
+cd casket-ssg
+
+# 2. Verify toolchain
+just toolchain
+
+# 3. Install dependencies
+just setup
+
+# 4. Build
+just build
+
+# 5. Run tests
+just test-all
+----
+
+=== Daily Development
+
+[source,bash]
+----
+# Morning: Update and build
+git pull origin main
+just deps
+just build
+
+# Development cycle
+just watch  # or: just repl
+
+# Before committing
+just pre-commit
+
+# Push
+git push
+----
+
+=== Adding a New Feature
+
+[source,bash]
+----
+# 1. Create branch
+git checkout -b feature/my-feature
+
+# 2. Implement in src/Casket.hs
+$EDITOR src/Casket.hs
+
+# 3. Build and test
+just rebuild
+just test-all
+
+# 4. Lint and format
+just lint
+just fmt
+
+# 5. Commit
+git add -A
+git commit -m "feat: Add my feature"
+
+# 6. Push
+git push -u origin feature/my-feature
+----
+
+=== Bug Fix
+
+[source,bash]
+----
+# 1. Create branch
+git checkout -b fix/issue-123
+
+# 2. Write failing test first
+$EDITOR src/Casket.hs  # Add test case
+
+# 3. Verify test fails
+just test  # Should fail
+
+# 4. Fix the bug
+$EDITOR src/Casket.hs
+
+# 5. Verify test passes
+just test  # Should pass
+
+# 6. Run full test suite
+just test-all
+
+# 7. Commit with issue reference
+git commit -m "fix: Resolve issue #123"
+----
+
+=== Release Process
+
+[source,bash]
+----
+# 1. Ensure clean state
+just clean && just rebuild
+
+# 2. Run all checks
+just test-all
+just lint
+just language-check
+
+# 3. Update version
+$EDITOR casket-ssg.cabal  # Update version
+
+# 4. Update changelog
+$EDITOR CHANGELOG.md
+
+# 5. Commit release
+git add -A
+git commit -m "chore: Release vX.Y.Z"
+
+# 6. Tag
+git tag vX.Y.Z
+
+# 7. Push
+git push && git push --tags
+----
+
+[[hooks]]
+== Git Hooks
+
+=== Pre-commit Hook
+
+[source,bash]
+----
+#!/bin/bash
+# .git/hooks/pre-commit
+
+set -e
+
+echo "Running pre-commit checks..."
+
+# Format check
+just fmt-check
+
+# Lint
+just lint
+
+# Tests
+just test
+
+# Language purity
+just language-check
+
+echo "✓ Pre-commit checks passed"
+----
+
+=== Pre-push Hook
+
+[source,bash]
+----
+#!/bin/bash
+# .git/hooks/pre-push
+
+set -e
+
+echo "Running pre-push checks..."
+
+# Full test suite
+just test-all
+
+# CI checks
+just ci
+
+echo "✓ Pre-push checks passed"
+----
+
+=== Installing Hooks
+
+[source,bash]
+----
+# Copy hooks to git directory
+cp .githooks/* .git/hooks/
+chmod +x .git/hooks/*
+
+# Or use git config
+git config core.hooksPath .githooks
+----
+
+[[troubleshooting]]
+== Troubleshooting
+
+=== Build Failures
+
+[source,bash]
+----
+# Clear cache and rebuild
+just clean
+cabal update
+just rebuild
+
+# Check GHC version
+ghc --version  # Should be 9.0+
+
+# Check Cabal version
+cabal --version  # Should be 3.0+
+----
+
+=== Test Failures
+
+[source,bash]
+----
+# Run with verbose output
+cabal test all --test-show-details=always
+
+# Run specific test
+cabal run casket-ssg -- test-markdown
+----
+
+=== Dependency Issues
+
+[source,bash]
+----
+# Update package index
+cabal update
+
+# Clear package cache
+rm -rf ~/.cabal/packages/*
+
+# Rebuild dependencies
+cabal build all --only-dependencies
+----
+
+[[appendix]]
+== Appendix
+
+=== Environment Variables
+
+[cols="1,2,1"]
+|===
+|Variable |Description |Default
+
+|`GHC_OPTIONS`
+|Additional GHC options
+|None
+
+|`CASKET_DEBUG`
+|Enable debug output
+|`false`
+
+|`CASKET_OUTPUT`
+|Output directory
+|`_site`
+|===
+
+=== File Structure
+
+[source]
+----
+casket-ssg/
+├── src/
+│   └── Casket.hs          # Main Haskell engine
+├── adapters/
+│   └── src/
+│       └── CasketAdapter.res  # ReScript MCP adapter
+├── .github/
+│   └── workflows/
+│       ├── ci.yml         # CI pipeline
+│       └── codeql.yml     # Security scanning
+├── .well-known/           # Security & AI policies
+├── Justfile               # Build automation
+├── Mustfile               # Required operations
+├── casket-ssg.cabal       # Haskell package config
+└── *.scm                  # SCM configuration files
+----
+
+=== Related Documentation
+
+* link:README.adoc[README] - User guide and quick start
+* link:CONTRIBUTING.md[Contributing] - How to contribute
+* link:SECURITY.md[Security] - Security policy
+* link:PLAYBOOK.scm[Playbook] - Operational procedures
+* link:ROADMAP.scm[Roadmap] - Development roadmap

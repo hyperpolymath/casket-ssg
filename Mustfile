@@ -1,0 +1,197 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# casket-ssg Mustfile — Required Operations (RSR Compliance)
+#
+# Mustfile defines MANDATORY operations for repository compliance.
+# All operations here MUST pass before merge/release.
+#
+# Usage: must <target>
+
+# ============================================================================
+# MANDATORY BUILD REQUIREMENTS
+# ============================================================================
+
+[build]
+description = "Project must build successfully"
+command = "cabal build all"
+required = true
+ci = true
+
+[build.release]
+description = "Release build must compile with optimizations"
+command = "cabal build all -O2"
+required = true
+pre-release = true
+
+# ============================================================================
+# MANDATORY TEST REQUIREMENTS
+# ============================================================================
+
+[test]
+description = "All tests must pass"
+command = "cabal test all"
+required = true
+ci = true
+
+[test.markdown]
+description = "Markdown parser must pass tests"
+command = "cabal run casket-ssg -- test-markdown"
+required = true
+
+[test.frontmatter]
+description = "Frontmatter parser must pass tests"
+command = "cabal run casket-ssg -- test-frontmatter"
+required = true
+
+[test.full]
+description = "Full pipeline must pass integration test"
+command = "cabal run casket-ssg -- test-full"
+required = true
+
+# ============================================================================
+# MANDATORY LANGUAGE COMPLIANCE
+# ============================================================================
+
+[language.purity]
+description = "Source must be Haskell-only"
+command = """
+forbidden=$(find src/ -type f \( -name "*.py" -o -name "*.js" -o -name "*.ts" -o -name "*.rb" \) 2>/dev/null || true)
+if [ -n "$forbidden" ]; then
+  echo "FORBIDDEN: Non-Haskell files in src/"
+  echo "$forbidden"
+  exit 1
+fi
+echo "✓ Language purity verified"
+"""
+required = true
+ci = true
+rationale = "casket-ssg is THE Haskell SSG. No exceptions."
+
+[language.adapter]
+description = "Adapter must be ReScript only"
+command = """
+forbidden=$(find adapters/src/ -type f \( -name "*.py" -o -name "*.js" -o -name "*.ts" -o -name "*.hs" \) 2>/dev/null || true)
+if [ -n "$forbidden" ]; then
+  echo "FORBIDDEN: Non-ReScript files in adapters/src/"
+  exit 1
+fi
+echo "✓ Adapter language verified"
+"""
+required = true
+
+# ============================================================================
+# MANDATORY SECURITY REQUIREMENTS
+# ============================================================================
+
+[security.spdx]
+description = "All source files must have SPDX headers"
+command = """
+missing=$(find src/ -name "*.hs" -exec grep -L "SPDX-License-Identifier" {} \; 2>/dev/null)
+if [ -n "$missing" ]; then
+  echo "Missing SPDX headers in:"
+  echo "$missing"
+  exit 1
+fi
+echo "✓ SPDX headers present"
+"""
+required = true
+
+[security.no-secrets]
+description = "No secrets in repository"
+command = """
+if git ls-files | xargs grep -l "PRIVATE KEY\|password\s*=\|api_key\s*=" 2>/dev/null; then
+  echo "FORBIDDEN: Potential secrets found"
+  exit 1
+fi
+echo "✓ No secrets detected"
+"""
+required = true
+pre-commit = true
+
+[security.policy]
+description = "Security policy must exist"
+command = "test -f SECURITY.md && test -f .well-known/security.txt"
+required = true
+
+# ============================================================================
+# MANDATORY DOCUMENTATION REQUIREMENTS
+# ============================================================================
+
+[docs.readme]
+description = "README must exist"
+command = "test -f README.adoc || test -f README.md"
+required = true
+
+[docs.license]
+description = "License must exist"
+command = "test -f LICENSE.txt || test -f LICENSE"
+required = true
+
+[docs.contributing]
+description = "Contributing guide must exist"
+command = "test -f CONTRIBUTING.md"
+required = true
+
+# ============================================================================
+# MANDATORY CI/CD REQUIREMENTS
+# ============================================================================
+
+[ci.workflow]
+description = "CI workflow must exist"
+command = "test -f .github/workflows/ci.yml"
+required = true
+
+[ci.sha-pinned]
+description = "GitHub Actions must be SHA-pinned"
+command = """
+if grep -r "uses:.*@v[0-9]" .github/workflows/*.yml 2>/dev/null | grep -v "#"; then
+  echo "WARNING: Found non-SHA-pinned actions (RSR recommends SHA pinning)"
+fi
+echo "✓ SHA pinning check complete"
+"""
+required = false
+recommended = true
+
+# ============================================================================
+# MANDATORY SCM REQUIREMENTS
+# ============================================================================
+
+[scm.state]
+description = "STATE.scm must exist and be valid"
+command = "test -f STATE.scm"
+required = true
+
+[scm.meta]
+description = "META.scm must exist"
+command = "test -f META.scm"
+required = true
+
+[scm.ecosystem]
+description = "ECOSYSTEM.scm must exist"
+command = "test -f ECOSYSTEM.scm"
+required = true
+
+# ============================================================================
+# PRE-RELEASE REQUIREMENTS
+# ============================================================================
+
+[release.version]
+description = "Version in .cabal must match tag"
+command = """
+if [ -n "$GITHUB_REF_NAME" ]; then
+  tag_version=${GITHUB_REF_NAME#v}
+  cabal_version=$(grep "^version:" casket-ssg.cabal | awk '{print $2}')
+  if [ "$tag_version" != "$cabal_version" ]; then
+    echo "Version mismatch: tag=$tag_version, cabal=$cabal_version"
+    exit 1
+  fi
+fi
+echo "✓ Version check passed"
+"""
+required = true
+pre-release = true
+
+[release.changelog]
+description = "CHANGELOG must be updated"
+command = "test -f CHANGELOG.md"
+required = false
+recommended = true

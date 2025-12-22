@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
+# casket-ssg CI Pipeline — Haskell SSG
 name: Haskell CI
 
 permissions: read-all
@@ -8,19 +9,29 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+
+env:
+  GHC_VERSION: '9.4'
+  CABAL_VERSION: '3.10'
 
 jobs:
+  # ============================================================================
+  # Build & Test
+  # ============================================================================
   build:
+    name: Build & Test
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
 
       - name: Set up GHC
         uses: haskell-actions/setup@dd344bc1cec854a9b2f7029b98379ce6c1accc98 # v2
         with:
-          ghc-version: '9.4'
-          cabal-version: '3.10'
+          ghc-version: ${{ env.GHC_VERSION }}
+          cabal-version: ${{ env.CABAL_VERSION }}
 
       - name: Cache Cabal
         uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4
@@ -30,25 +41,201 @@ jobs:
             ~/.cabal/store
             dist-newstyle
           key: ${{ runner.os }}-cabal-${{ hashFiles('**/*.cabal') }}
+          restore-keys: |
+            ${{ runner.os }}-cabal-
+
+      - name: Update Cabal
+        run: cabal update
 
       - name: Build
-        run: cabal build all
+        run: cabal build all -Wall
 
       - name: Test
-        run: cabal test all
+        run: cabal test all --test-show-details=always
 
+      - name: Test Markdown Parser
+        run: cabal run casket-ssg -- test-markdown
+
+      - name: Test Frontmatter Parser
+        run: cabal run casket-ssg -- test-frontmatter
+
+      - name: Test Full Pipeline
+        run: cabal run casket-ssg -- test-full
+
+  # ============================================================================
+  # Language Purity Check
+  # ============================================================================
   language-check:
+    name: Language Purity
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
 
       - name: Verify Haskell-only in src/
         run: |
           echo "Checking for forbidden languages in src/..."
-          forbidden=$(find src/ -type f \( -name "*.py" -o -name "*.js" -o -name "*.ts" -o -name "*.rb" \) 2>/dev/null || true)
+          forbidden=$(find src/ -type f \( -name "*.py" -o -name "*.js" -o -name "*.ts" -o -name "*.rb" -o -name "*.go" -o -name "*.rs" \) 2>/dev/null || true)
           if [ -n "$forbidden" ]; then
-            echo "ERROR: Found forbidden language files in src/:"
+            echo "::error::FORBIDDEN: Non-Haskell files in src/:"
             echo "$forbidden"
             exit 1
           fi
-          echo "OK: Only Haskell files in src/"
+          echo "✓ Only Haskell files in src/"
+
+      - name: Verify ReScript-only in adapters/
+        run: |
+          echo "Checking adapter language..."
+          if [ -d adapters/src ]; then
+            forbidden=$(find adapters/src/ -type f \( -name "*.py" -o -name "*.ts" -o -name "*.hs" \) 2>/dev/null || true)
+            if [ -n "$forbidden" ]; then
+              echo "::error::FORBIDDEN: Non-ReScript files in adapters/src/:"
+              echo "$forbidden"
+              exit 1
+            fi
+          fi
+          echo "✓ Adapter language verified"
+
+      - name: Verify SPDX headers
+        run: |
+          echo "Checking SPDX headers in src/..."
+          missing=$(find src/ -name "*.hs" -exec grep -L "SPDX-License-Identifier" {} \; 2>/dev/null || true)
+          if [ -n "$missing" ]; then
+            echo "::warning::Missing SPDX headers in:"
+            echo "$missing"
+          else
+            echo "✓ SPDX headers present"
+          fi
+
+  # ============================================================================
+  # Adapter Build
+  # ============================================================================
+  adapter:
+    name: Build Adapter
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@1a4442cacd436585916f1aff0e9f4e2f9de634a8 # v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: adapters/package-lock.json
+
+      - name: Install dependencies
+        working-directory: adapters
+        run: npm install
+
+      - name: Build ReScript adapter
+        working-directory: adapters
+        run: npm run build
+
+  # ============================================================================
+  # Lint (Optional - runs if HLint available)
+  # ============================================================================
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+
+      - name: Set up GHC
+        uses: haskell-actions/setup@dd344bc1cec854a9b2f7029b98379ce6c1accc98 # v2
+        with:
+          ghc-version: ${{ env.GHC_VERSION }}
+          cabal-version: ${{ env.CABAL_VERSION }}
+
+      - name: Install HLint
+        run: cabal install hlint --overwrite-policy=always
+
+      - name: Run HLint
+        run: ~/.cabal/bin/hlint src/ --report
+
+      - name: Upload HLint Report
+        uses: actions/upload-artifact@65d862660abb392b8c4a3d1195a2108db131dd05 # v4
+        if: always()
+        with:
+          name: hlint-report
+          path: report.html
+
+  # ============================================================================
+  # Documentation
+  # ============================================================================
+  docs:
+    name: Build Documentation
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+
+      - name: Set up GHC
+        uses: haskell-actions/setup@dd344bc1cec854a9b2f7029b98379ce6c1accc98 # v2
+        with:
+          ghc-version: ${{ env.GHC_VERSION }}
+          cabal-version: ${{ env.CABAL_VERSION }}
+
+      - name: Build Haddock
+        run: cabal haddock --haddock-html
+
+  # ============================================================================
+  # Security Checks
+  # ============================================================================
+  security:
+    name: Security Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+
+      - name: Check for secrets
+        run: |
+          echo "Scanning for potential secrets..."
+          if git ls-files | xargs grep -l "PRIVATE KEY\|password\s*=\|api_key\s*=" 2>/dev/null; then
+            echo "::error::Potential secrets detected!"
+            exit 1
+          fi
+          echo "✓ No secrets detected"
+
+      - name: Verify security policy exists
+        run: |
+          test -f SECURITY.md || (echo "::error::SECURITY.md missing" && exit 1)
+          test -f .well-known/security.txt || (echo "::error::security.txt missing" && exit 1)
+          echo "✓ Security policy files present"
+
+  # ============================================================================
+  # SCM Validation
+  # ============================================================================
+  scm-check:
+    name: SCM Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+
+      - name: Verify SCM files exist
+        run: |
+          echo "Checking SCM configuration files..."
+          files=("STATE.scm" "META.scm" "ECOSYSTEM.scm" "ROADMAP.scm" "PLAYBOOK.scm" "AGENTIC.scm" "NEUROSYM.scm")
+          missing=0
+          for f in "${files[@]}"; do
+            if [ ! -f "$f" ]; then
+              echo "::warning::Missing SCM file: $f"
+              missing=$((missing + 1))
+            fi
+          done
+          if [ $missing -gt 0 ]; then
+            echo "::warning::$missing SCM files missing"
+          else
+            echo "✓ All SCM files present"
+          fi

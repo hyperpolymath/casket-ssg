@@ -1,0 +1,74 @@
+#!/bin/bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# casket-ssg pre-commit hook
+#
+# Install: git config core.hooksPath .githooks
+# Or copy to .git/hooks/pre-commit
+
+set -e
+
+echo "Running pre-commit checks..."
+
+# ============================================================================
+# Language Purity Check (CRITICAL)
+# ============================================================================
+echo "→ Checking language purity..."
+
+forbidden=$(find src/ -type f \( -name "*.py" -o -name "*.js" -o -name "*.ts" -o -name "*.rb" -o -name "*.go" \) 2>/dev/null || true)
+if [ -n "$forbidden" ]; then
+    echo "❌ FORBIDDEN: Non-Haskell files in src/:"
+    echo "$forbidden"
+    echo ""
+    echo "casket-ssg is the DEFINITIVE Haskell SSG."
+    echo "No other languages are permitted in src/"
+    exit 1
+fi
+echo "✓ Language purity verified"
+
+# ============================================================================
+# Secrets Check
+# ============================================================================
+echo "→ Checking for secrets..."
+
+if git diff --cached --name-only | xargs grep -l "PRIVATE KEY\|password\s*=\|api_key\s*=" 2>/dev/null; then
+    echo "❌ Potential secrets detected in staged files!"
+    exit 1
+fi
+echo "✓ No secrets detected"
+
+# ============================================================================
+# Build Check (if cabal available)
+# ============================================================================
+if command -v cabal >/dev/null 2>&1; then
+    echo "→ Building..."
+    cabal build all -Wall >/dev/null 2>&1 || {
+        echo "❌ Build failed"
+        exit 1
+    }
+    echo "✓ Build passed"
+fi
+
+# ============================================================================
+# Test Check (if cabal available)
+# ============================================================================
+if command -v cabal >/dev/null 2>&1; then
+    echo "→ Running tests..."
+    cabal test all >/dev/null 2>&1 || {
+        echo "❌ Tests failed"
+        exit 1
+    }
+    echo "✓ Tests passed"
+fi
+
+# ============================================================================
+# Lint Check (if hlint available)
+# ============================================================================
+if command -v hlint >/dev/null 2>&1; then
+    echo "→ Linting..."
+    hlint src/ --quiet || {
+        echo "⚠️  HLint suggestions found (non-blocking)"
+    }
+fi
+
+echo ""
+echo "✓ Pre-commit checks passed"
