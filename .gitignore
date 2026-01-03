@@ -54,6 +54,11 @@ __pycache__/
 # Haskell
 /.stack-work/
 /dist-newstyle/
+/_site/
+*.hi
+*.o
+*.dyn_hi
+*.dyn_o
 
 # Chapel
 *.chpl.tmp.*

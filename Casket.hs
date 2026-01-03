@@ -10,9 +10,12 @@
 
 module Main where
 
-import Data.List (isPrefixOf, intercalate, foldl')
+import Data.List (isPrefixOf, isSuffixOf, foldl')
 import Data.Char (isSpace)
 import System.Environment (getArgs)
+import System.Directory (listDirectory, createDirectoryIfMissing, doesFileExist)
+import System.FilePath ((</>), takeBaseName, takeExtension)
+import Control.Monad (forM_, when)
 
 -- ============================================================================
 -- Types
@@ -292,6 +295,84 @@ testFull = do
   putStrLn output
 
 -- ============================================================================
+-- Build System
+-- ============================================================================
+
+-- | Process a single markdown file
+processFile :: FilePath -> FilePath -> IO ()
+processFile inputPath outputPath = do
+  content <- readFile inputPath
+  let (fm, body) = parseFrontmatter content
+  -- Skip draft posts
+  when (not $ fmDraft fm) $ do
+    let html = parseMarkdown body
+    let output = applyTemplate fm html
+    writeFile outputPath output
+    putStrLn $ "  " ++ inputPath ++ " -> " ++ outputPath
+
+-- | Build site from input directory to output directory
+buildSite :: FilePath -> FilePath -> IO ()
+buildSite inputDir outputDir = do
+  putStrLn $ "Building site: " ++ inputDir ++ " -> " ++ outputDir
+  createDirectoryIfMissing True outputDir
+
+  files <- listDirectory inputDir
+  let mdFiles = filter (\f -> takeExtension f == ".md") files
+
+  if null mdFiles
+    then putStrLn "No markdown files found."
+    else do
+      putStrLn $ "Found " ++ show (length mdFiles) ++ " markdown files:"
+      forM_ mdFiles $ \file -> do
+        let inputPath = inputDir </> file
+        let outputPath = outputDir </> takeBaseName file ++ ".html"
+        processFile inputPath outputPath
+
+  putStrLn "Build complete!"
+
+-- | Generate an index page listing all posts (only if no index.md exists)
+generateIndex :: FilePath -> FilePath -> IO ()
+generateIndex inputDir outputDir = do
+  files <- listDirectory inputDir
+  let mdFiles = filter (\f -> takeExtension f == ".md") files
+
+  -- Don't generate if index.md exists (it will have its own index.html)
+  let hasIndexMd = "index.md" `elem` mdFiles
+  when hasIndexMd $
+    putStrLn "Skipping index generation (index.md exists)"
+
+  when (not hasIndexMd) $ do
+    -- Read frontmatter from each file to build index
+    entries <- mapM (\f -> do
+      content <- readFile (inputDir </> f)
+      let (fm, _) = parseFrontmatter content
+      return (takeBaseName f, fm)
+      ) mdFiles
+
+    let validEntries = filter (not . fmDraft . snd) entries
+    let listItems = map (\(name, fm) ->
+          "<li><a href=\"" ++ name ++ ".html\">" ++
+          (if null (fmTitle fm) then name else fmTitle fm) ++
+          "</a>" ++
+          (if null (fmDate fm) then "" else " <small>(" ++ fmDate fm ++ ")</small>") ++
+          "</li>") validEntries
+
+    let indexHtml = unlines
+          [ "<!DOCTYPE html>"
+          , "<html><head><meta charset=\"UTF-8\"><title>Index</title>"
+          , "<style>body{font-family:system-ui;max-width:800px;margin:0 auto;padding:2rem}a{color:#0066cc}</style>"
+          , "</head><body>"
+          , "<h1>Site Index</h1>"
+          , "<ul>"
+          ] ++ unlines listItems ++ unlines
+          [ "</ul>"
+          , "</body></html>"
+          ]
+
+    writeFile (outputDir </> "index.html") indexHtml
+    putStrLn $ "Generated index.html with " ++ show (length validEntries) ++ " entries"
+
+-- ============================================================================
 -- Main
 -- ============================================================================
 
@@ -299,9 +380,20 @@ main :: IO ()
 main = do
   args <- getArgs
   case args of
+    ["build", inputDir, outputDir] -> do
+      buildSite inputDir outputDir
+      generateIndex inputDir outputDir
+    ["build", inputDir] -> do
+      buildSite inputDir "_site"
+      generateIndex inputDir "_site"
     ["test-markdown"]    -> testMarkdown
     ["test-frontmatter"] -> testFrontmatter
     ["test-full"]        -> testFull
     _ -> do
-      putStrLn "HakyllLite - Haskell powered SSG"
-      putStrLn "Commands: test-markdown test-frontmatter test-full"
+      putStrLn "casket-ssg - Pure functional static site generator in Haskell"
+      putStrLn ""
+      putStrLn "Usage:"
+      putStrLn "  casket-ssg build <input-dir> [output-dir]  Build site (default output: _site)"
+      putStrLn "  casket-ssg test-markdown                   Test markdown parser"
+      putStrLn "  casket-ssg test-frontmatter                Test frontmatter parser"
+      putStrLn "  casket-ssg test-full                       Test full pipeline"
