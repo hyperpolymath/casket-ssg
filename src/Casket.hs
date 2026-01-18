@@ -13,6 +13,9 @@ module Main where
 import Data.List (isPrefixOf, intercalate, foldl')
 import Data.Char (isSpace)
 import System.Environment (getArgs)
+import System.Directory (createDirectoryIfMissing, doesDirectoryExist, listDirectory, removeDirectoryRecursive, copyFile)
+import System.FilePath ((</>), takeExtension, replaceExtension)
+import Control.Monad (forM_, when)
 
 -- ============================================================================
 -- Types
@@ -292,6 +295,167 @@ testFull = do
   putStrLn output
 
 -- ============================================================================
+-- File System Operations
+-- ============================================================================
+
+-- Site configuration
+data SiteConfig = SiteConfig
+  { contentDir  :: FilePath
+  , outputDir   :: FilePath
+  , templateDir :: FilePath
+  , staticDir   :: FilePath
+  , siteTitle   :: String
+  } deriving (Show)
+
+defaultConfig :: SiteConfig
+defaultConfig = SiteConfig
+  { contentDir  = "content"
+  , outputDir   = "public"
+  , templateDir = "templates"
+  , staticDir   = "static"
+  , siteTitle   = "My Site"
+  }
+
+-- Build command
+buildSite :: SiteConfig -> IO ()
+buildSite config = do
+  putStrLn "Building site..."
+
+  -- Ensure output directory exists
+  createDirectoryIfMissing True (outputDir config)
+
+  -- Check if content directory exists
+  contentExists <- doesDirectoryExist (contentDir config)
+  if not contentExists
+    then do
+      putStrLn $ "No content directory found. Creating " ++ contentDir config ++ "/"
+      createDirectoryIfMissing True (contentDir config)
+    else do
+      -- Process markdown files
+      files <- listDirectory (contentDir config)
+      let mdFiles = filter (\f -> takeExtension f == ".md") files
+      contentCount <- processFiles config mdFiles
+
+      -- Copy static files
+      staticCount <- copyStatic config
+
+      putStrLn $ "\nBuild complete: " ++ show contentCount ++ " pages, " ++ show staticCount ++ " static files"
+
+processFiles :: SiteConfig -> [FilePath] -> IO Int
+processFiles config files = do
+  forM_ files $ \file -> do
+    let srcPath = contentDir config </> file
+    content <- readFile srcPath
+
+    let (fm, body) = parseFrontmatter content
+    let html = parseMarkdown body
+    let output = applyTemplate fm html
+
+    let outName = replaceExtension file ".html"
+    let outPath = outputDir config </> outName
+
+    writeFile outPath output
+    putStrLn $ "  " ++ file ++ " -> " ++ outPath
+
+  return (length files)
+
+copyStatic :: SiteConfig -> IO Int
+copyStatic config = do
+  staticExists <- doesDirectoryExist (staticDir config)
+  if not staticExists
+    then return 0
+    else do
+      files <- listDirectory (staticDir config)
+      forM_ files $ \file -> do
+        let src = staticDir config </> file
+        let dst = outputDir config </> file
+        copyFile src dst
+      return (length files)
+
+-- Init command
+initSite :: FilePath -> IO ()
+initSite name = do
+  putStrLn $ "Initializing new site: " ++ name
+
+  -- Create directories
+  let dirs = [name </> "content", name </> "templates", name </> "static", name </> "public"]
+  forM_ dirs $ \dir -> do
+    createDirectoryIfMissing True dir
+    putStrLn $ "  Created " ++ dir ++ "/"
+
+  -- Create sample content
+  let sampleContent = unlines
+        [ "---"
+        , "title: Welcome to Casket"
+        , "date: 2025-01-18"
+        , "---"
+        , ""
+        , "# Welcome"
+        , ""
+        , "This is your first post built with **Casket SSG**."
+        , ""
+        , "## Features"
+        , ""
+        , "- Pure functional transformations"
+        , "- Type-safe templates"
+        , "- Lazy evaluation"
+        , ""
+        , "```haskell"
+        , "main :: IO ()"
+        , "main = putStrLn \"Hello, Casket!\""
+        , "```"
+        ]
+  writeFile (name </> "content" </> "index.md") sampleContent
+  putStrLn "  Created sample content"
+
+  -- Create config
+  let configContent = unlines
+        [ "# Casket SSG Configuration"
+        , ""
+        , "site_title = \"My Casket Site\""
+        , "content_dir = \"content\""
+        , "output_dir = \"public\""
+        , "template_dir = \"templates\""
+        , "static_dir = \"static\""
+        ]
+  writeFile (name </> "casket.conf") configContent
+  putStrLn "  Created casket.conf"
+
+  putStrLn $ "\nSite initialized! Run 'casket-ssg build' in " ++ name ++ "/ to build."
+
+-- Clean command
+cleanSite :: SiteConfig -> IO ()
+cleanSite config = do
+  putStrLn $ "Cleaning " ++ outputDir config ++ "/..."
+  exists <- doesDirectoryExist (outputDir config)
+  when exists $ removeDirectoryRecursive (outputDir config)
+  putStrLn "Clean complete."
+
+-- Help text
+printUsage :: IO ()
+printUsage = putStrLn $ unlines
+  [ "Casket SSG - Haskell-powered static site generator"
+  , ""
+  , "USAGE:"
+  , "  casket-ssg <command> [options]"
+  , ""
+  , "COMMANDS:"
+  , "  build              Build the site"
+  , "  init <name>        Create a new site"
+  , "  clean              Remove generated files"
+  , "  test-markdown      Test markdown parser"
+  , "  test-frontmatter   Test frontmatter parser"
+  , "  test-full          Test full pipeline"
+  , ""
+  , "OPTIONS:"
+  , "  -h, --help         Show this help"
+  , ""
+  , "EXAMPLES:"
+  , "  casket-ssg init my-blog"
+  , "  cd my-blog && casket-ssg build"
+  ]
+
+-- ============================================================================
 -- Main
 -- ============================================================================
 
@@ -299,9 +463,15 @@ main :: IO ()
 main = do
   args <- getArgs
   case args of
+    ["build"]            -> buildSite defaultConfig
+    ["init", name]       -> initSite name
+    ["init"]             -> putStrLn "Error: 'init' requires a site name\nUsage: casket-ssg init <name>"
+    ["clean"]            -> cleanSite defaultConfig
     ["test-markdown"]    -> testMarkdown
     ["test-frontmatter"] -> testFrontmatter
     ["test-full"]        -> testFull
-    _ -> do
-      putStrLn "HakyllLite - Haskell powered SSG"
-      putStrLn "Commands: test-markdown test-frontmatter test-full"
+    ["-h"]               -> printUsage
+    ["--help"]           -> printUsage
+    []                   -> printUsage
+    [cmd]                -> putStrLn $ "Unknown command: " ++ cmd ++ "\nRun 'casket-ssg --help' for usage."
+    _                    -> printUsage
