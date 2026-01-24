@@ -91,8 +91,91 @@ processIfBlocks ctx template = go template
         | otherwise = take 1 str ++ go (drop 1 str)
 
 -- | Process {{#for item in list}} ... {{/for}} blocks
+-- Supports: {{#for tag in tags}} ... {{/for}}
+-- List values can be comma-separated strings in context
 processForBlocks :: Context -> String -> String
-processForBlocks _ template = template  -- TODO: Implement in full version
+processForBlocks ctx template = go template
+  where
+    go [] = []
+    go str
+        | "{{#for " `isPrefixOf` str =
+            let (loopSpec, rest1) = extractUntil "}}" (drop 7 str)  -- drop "{{#for "
+                (loopBody, rest2) = extractUntil "{{/for}}" rest1
+                result = processLoop ctx loopSpec loopBody
+            in result ++ go rest2  -- extractUntil already dropped "{{/for}}"
+        | otherwise = take 1 str ++ go (drop 1 str)
+
+-- | Process a single loop: extract variable name and list key, then iterate
+processLoop :: Context -> String -> String -> String
+processLoop ctx loopSpec loopBody =
+    case parseLoopSpec (trim loopSpec) of
+        Just (itemVar, listKey) ->
+            case Map.lookup listKey ctx of
+                Just (FlexiText listStr _) ->
+                    let items = splitList listStr
+                        renderedItems = map (renderLoopItem itemVar loopBody) items
+                    in concat renderedItems
+                Nothing -> ""  -- List key not found, render nothing
+        Nothing -> ""  -- Invalid loop syntax, render nothing
+
+-- | Parse "item in listKey" into (item, listKey)
+parseLoopSpec :: String -> Maybe (String, String)
+parseLoopSpec spec =
+    case words spec of
+        [item, "in", listKey] -> Just (trim item, trim listKey)
+        _ -> Nothing
+
+-- | Split a comma-separated list
+splitList :: String -> [String]
+splitList str = map trim (splitOn ',' str)
+  where
+    splitOn _ [] = []
+    splitOn delim s =
+        let (chunk, rest) = break (== delim) s
+        in chunk : case rest of
+            [] -> []
+            (_:xs) -> splitOn delim xs
+
+-- | Render loop body with item variable replaced
+renderLoopItem :: String -> String -> String -> String
+renderLoopItem varName body itemValue = replacePlaceholder varName itemValue body
+
+-- | Replace (:varName) or (:varName | filter) with value in string
+-- Handles both simple placeholders and filter syntax
+replacePlaceholder :: String -> String -> String -> String
+replacePlaceholder varName value = go
+  where
+    placeholderStart = "(:" ++ varName
+    go [] = []
+    go str
+        | placeholderStart `isPrefixOf` str =
+            -- Found start of placeholder, find the closing )
+            let afterStart = drop (length placeholderStart) str
+                (filterPart, rest) = span (/= ')') afterStart
+                closingRest = drop 1 rest  -- Drop the )
+                -- Parse and apply filters if present
+                filters = parseFilters (trim filterPart)
+                filteredValue = applyFilters filters value
+            in filteredValue ++ go closingRest
+        | otherwise = take 1 str ++ go (drop 1 str)
+
+    -- Parse "| filter1 | filter2" into ["filter1", "filter2"]
+    parseFilters "" = []
+    parseFilters s
+        | "|" `isPrefixOf` s =
+            let parts = splitOn '|' (trim s)
+            in map trim (filter (not . null) parts)
+        | otherwise = []
+
+    splitOn _ [] = []
+    splitOn delim s =
+        let (chunk, rest) = break (== delim) s
+        in chunk : case rest of
+            [] -> []
+            (_:xs) -> splitOn delim xs
+
+    applyFilters [] v = v
+    applyFilters (f:fs) v = applyFilters fs (applyFilter f v)
 
 -- Helper: Extract text until delimiter
 extractUntil :: String -> String -> (String, String)

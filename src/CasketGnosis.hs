@@ -19,6 +19,7 @@ import qualified Gnosis.SixSCM as Gnosis
 import qualified Gnosis.Render as Render
 import qualified Gnosis.DAX as DAX
 import qualified Gnosis.Types as Types
+import qualified Data.Map.Strict as Map
 
 -- | Main entry point for casket-ssg with Gnosis
 main :: IO ()
@@ -85,14 +86,25 @@ processFileWithGnosis ctx inputPath outputPath = do
     -- Read template file
     content <- readFile inputPath
 
-    -- Step 1: Apply Gnosis rendering ((:placeholder))
-    let withPlaceholders = Render.renderWithBadges ctx content
+    -- Parse frontmatter and content
+    let (frontmatter, bodyContent) = parseFrontmatter content
 
-    -- Step 2: Process DAX features ({{#if}}, {{#for}})
-    let withDAX = DAX.processTemplate ctx withPlaceholders
+    -- Merge frontmatter into context (frontmatter takes precedence)
+    let mergedCtx = mergeFrontmatter ctx frontmatter
+
+    -- Get page title from frontmatter or fallback to filename
+    let pageTitle = Map.findWithDefault (takeBaseName inputPath) "title" frontmatter
+
+    -- Step 1: Process DAX features first ({{#if}}, {{#for}})
+    -- This expands loops with literal values and evaluates conditionals
+    let withDAX = DAX.processTemplate mergedCtx bodyContent
+
+    -- Step 2: Apply Gnosis rendering ((:placeholder))
+    -- This renders remaining 6scm placeholders and applies filters
+    let withPlaceholders = Render.renderWithBadges mergedCtx withDAX
 
     -- Step 3: Wrap in simple HTML template
-    let html = wrapInTemplate (takeBaseName inputPath) withDAX
+    let html = wrapInTemplate pageTitle withPlaceholders
 
     -- Write output
     writeFile outputPath html
@@ -115,3 +127,37 @@ wrapInTemplate title content = unlines
     , "</article>"
     , "</body></html>"
     ]
+
+-- | Parse frontmatter from content
+-- Returns (frontmatter Map, remaining content)
+parseFrontmatter :: String -> (Map.Map String String, String)
+parseFrontmatter content
+    | "---\n" `isPrefixOf` content || "---\r\n" `isPrefixOf` content =
+        let afterFirst = dropWhile (/= '\n') content
+            rest = drop 1 afterFirst  -- Drop first newline
+            (frontmatterText, bodyWithDelim) = break isEndDelimiter (lines rest)
+            body = unlines (dropWhile isEndDelimiter bodyWithDelim)
+            frontmatterMap = parseFrontmatterLines frontmatterText
+        in (frontmatterMap, body)
+    | otherwise = (Map.empty, content)
+  where
+    isEndDelimiter line = line == "---" || line == "---\r"
+    isPrefixOf needle haystack = take (length needle) haystack == needle
+
+-- | Parse frontmatter lines into Map
+parseFrontmatterLines :: [String] -> Map.Map String String
+parseFrontmatterLines = Map.fromList . map parseLine . filter (not . null)
+  where
+    parseLine line =
+        let (key, rest) = break (== ':') line
+            value = dropWhile (== ' ') (drop 1 rest)  -- Drop ':' and spaces
+        in (trim key, trim value)
+
+    trim = reverse . dropWhile isSpace . reverse . dropWhile isSpace
+    isSpace c = c == ' ' || c == '\t' || c == '\n' || c == '\r'
+
+-- | Merge frontmatter into context (frontmatter takes precedence)
+mergeFrontmatter :: Types.Context -> Map.Map String String -> Types.Context
+mergeFrontmatter baseCtx frontmatter =
+    let frontmatterAsContext = Map.mapWithKey (\k v -> Types.FlexiText v ("Frontmatter: " ++ k)) frontmatter
+    in Map.union frontmatterAsContext baseCtx  -- frontmatter overrides base

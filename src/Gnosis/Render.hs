@@ -19,6 +19,7 @@ module Gnosis.Render
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Gnosis.Types (FlexiText(..), Context, renderFlexiText, renderFlexiTextBadge)
+import qualified Gnosis.DAX as DAX
 
 -- | Rendering mode determines how FlexiText values are output.
 data RenderMode
@@ -39,15 +40,54 @@ renderWithBadges = renderWithMode ShieldsIOBadge
 renderWithMode :: RenderMode -> Context -> String -> String
 renderWithMode _ _ [] = []
 renderWithMode mode ctx ('(':':':rest) =
-    let (key, remaining) = span (/= ')') rest
+    let (placeholder, remaining) = span (/= ')') rest
         tailStr = drop 1 remaining  -- Drop closing ')'
+
+        -- Parse key and optional filters: "key | filter1 | filter2"
+        (key, filters) = parseKeyAndFilters placeholder
+
+        -- Look up base value and apply filters BEFORE rendering
         replacement = case Map.lookup key ctx of
-            Just ft -> case mode of
-                PlainText -> renderFlexiText ft
-                ShieldsIOBadge -> renderFlexiTextBadge key ft
+            Just ft ->
+                -- Apply filters to the visual component
+                let filteredVisual = applyFilters filters (visual ft)
+                    filteredFt = FlexiText filteredVisual (altText ft)
+                in case mode of
+                    PlainText -> renderFlexiText filteredFt
+                    ShieldsIOBadge -> renderFlexiTextBadge key filteredFt
             Nothing -> "(:MISSING:" ++ key ++ ")"
+
     in replacement ++ renderWithMode mode ctx tailStr
 renderWithMode mode ctx (c:cs) = c : renderWithMode mode ctx cs
+
+-- | Parse "key | filter1 | filter2" into (key, [filter1, filter2])
+parseKeyAndFilters :: String -> (String, [String])
+parseKeyAndFilters placeholder =
+    let parts = splitOn '|' placeholder
+        trimmedParts = map trim parts
+    in case trimmedParts of
+        [] -> ("", [])
+        (k:fs) -> (k, fs)
+
+-- | Apply a list of filters in sequence
+applyFilters :: [String] -> String -> String
+applyFilters [] value = value
+applyFilters (f:fs) value = applyFilters fs (DAX.applyFilter f value)
+
+-- | Split string on delimiter
+splitOn :: Char -> String -> [String]
+splitOn _ [] = []
+splitOn delim s =
+    let (chunk, rest) = break (== delim) s
+    in chunk : case rest of
+        [] -> []
+        (_:xs) -> splitOn delim xs
+
+-- | Trim whitespace from string
+trim :: String -> String
+trim = reverse . dropWhile isSpace . reverse . dropWhile isSpace
+  where
+    isSpace c = c == ' ' || c == '\t' || c == '\n' || c == '\r'
 
 -- | Sanitize a string for safe inclusion in various contexts.
 -- Guard 1 of the Tri-Guard system.
