@@ -1,0 +1,98 @@
+# SPDX-License-Identifier: PMPL-1.0-or-later
+name: Casket-SSG CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'casket-ssg.cabal'
+      - 'stack.yaml'
+      - '.github/workflows/casket-ci.yml'
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: read-all
+
+jobs:
+  build-and-test:
+    name: Build and Test Casket-SSG + Gnosis
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        ghc: ['9.4.8', '9.6.6']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+
+      - name: Setup Haskell
+        uses: haskell-actions/setup@33c6834e5a4ec21f93e28ca2d2c03d1c3414cc8c # v2
+        with:
+          ghc-version: ${{ matrix.ghc }}
+          enable-stack: true
+          stack-version: 'latest'
+
+      - name: Cache Stack dependencies
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4
+        with:
+          path: |
+            ~/.stack
+            .stack-work
+          key: ${{ runner.os }}-stack-${{ matrix.ghc }}-${{ hashFiles('stack.yaml', 'casket-ssg.cabal') }}
+          restore-keys: |
+            ${{ runner.os }}-stack-${{ matrix.ghc }}-
+            ${{ runner.os }}-stack-
+
+      - name: Build casket-ssg
+        run: stack build --test --no-run-tests
+
+      - name: Test site generation with Gnosis
+        run: |
+          # Create test 6scm metadata
+          mkdir -p .machine_readable
+          cat > .machine_readable/STATE.scm << 'EOF'
+          (state
+            (identity
+              (name . "Test Site")
+              (version . "1.0.0")
+              (phase . "testing"))
+            (vital-signs
+              (health-score . "100")
+              (compliance-level . "A")))
+          EOF
+
+          # Create test content
+          mkdir -p test-content
+          cat > test-content/index.md << 'EOF'
+          # (:name)
+
+          **Version:** (:version)
+          **Phase:** (:phase)
+          **Health:** (:health)/100
+
+          This is a test site generated with casket-ssg + Gnosis.
+          EOF
+
+          # Build site
+          stack exec casket-ssg -- build test-content test-output
+
+          # Verify output
+          test -f test-output/index.html || (echo "ERROR: index.html not generated" && exit 1)
+
+          # Check that placeholders were replaced
+          grep -q "Test Site" test-output/index.html || (echo "ERROR: name not rendered" && exit 1)
+          grep -q "1.0.0" test-output/index.html || (echo "ERROR: version not rendered" && exit 1)
+          grep -q "testing" test-output/index.html || (echo "ERROR: phase not rendered" && exit 1)
+
+          echo "✅ Site generation test passed"
+
+      - name: Upload casket-ssg binary
+        if: matrix.os == 'ubuntu-latest' && matrix.ghc == '9.6.6'
+        uses: actions/upload-artifact@ea165de6abb5050e17c80995d4e2caaec6d72898 # v4
+        with:
+          name: casket-ssg-${{ runner.os }}-${{ matrix.ghc }}
+          path: .stack-work/install/**/bin/casket-ssg
+          retention-days: 30
