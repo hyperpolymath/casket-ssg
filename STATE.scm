@@ -4,7 +4,7 @@
 
 (define-state casket-ssg
   (metadata
-    (version "1.0.0")
+    (version "2.0.0")
     (schema-version "1.0.0")
     (created "2026-01-30")
     (updated "2026-01-30")
@@ -30,7 +30,9 @@
       ((name "a2ml Integration") (status "complete") (completion 100))
       ((name "k9-svc Validation") (status "complete") (completion 100))
       ((name "Gnosis Integration") (status "complete") (completion 100))
-      ((name "Pandoc Integration") (status "future") (completion 0))
+      ((name "Pandoc Integration") (status "complete") (completion 100))
+      ((name "Spell Checking") (status "complete") (completion 100))
+      ((name "i18n Support") (status "complete") (completion 100))
       ((name "Development Server") (status "future") (completion 0)))
     (working-features
       "Markdown to HTML conversion"
@@ -43,6 +45,15 @@
       "Template variable substitution"
       "Index generation"
       "Draft post filtering"
+      "Asset handling (CSS, images, fonts)"
+      "External template system"
+      "Site configuration (config.yaml)"
+      "a2ml content (typed, verifiable)"
+      "k9-svc validation (self-validating)"
+      "Pandoc integration (AsciiDoc, RST, Org)"
+      "Spell checking (hunspell/aspell)"
+      "i18n support (en, es, fr, de)"
+      "Multi-format support (.md, .adoc, .rst, .org, .a2ml)"
       "Gnosis 6scm metadata integration"
       "DAX template features ({{#if}}, {{#for}})"
       "FlexiText badges"))
