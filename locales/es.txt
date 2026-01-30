@@ -1,0 +1,5 @@
+# Spanish translations
+read_more: Leer más
+published: Publicado
+tags: Etiquetas
+home: Inicio

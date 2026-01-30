@@ -16,6 +16,8 @@ import System.Environment (getArgs)
 import System.Directory (listDirectory, createDirectoryIfMissing, doesFileExist, doesDirectoryExist, copyFile)
 import System.FilePath ((</>), takeBaseName, takeExtension, takeFileName)
 import Control.Monad (forM_, when, filterM)
+import System.Process (readProcess)
+import System.Exit (ExitCode(..))
 
 -- ============================================================================
 -- Types
@@ -33,15 +35,27 @@ emptyFrontmatter :: Frontmatter
 emptyFrontmatter = Frontmatter "" "" [] False "default"
 
 data SiteConfig = SiteConfig
-  { cfgTitle      :: String
-  , cfgUrl        :: String
-  , cfgAuthor     :: String
-  , cfgInputDir   :: String
-  , cfgOutputDir  :: String
+  { cfgTitle       :: String
+  , cfgUrl         :: String
+  , cfgAuthor      :: String
+  , cfgInputDir    :: String
+  , cfgOutputDir   :: String
+  , cfgSpellCheck  :: Bool
+  , cfgDefaultLang :: String
   } deriving (Show)
 
 defaultConfig :: SiteConfig
-defaultConfig = SiteConfig "My Site" "" "Author" "content" "_site"
+defaultConfig = SiteConfig "My Site" "" "Author" "content" "_site" False "en"
+
+data I18nStrings = I18nStrings
+  { i18nReadMore    :: String
+  , i18nPublished   :: String
+  , i18nTags        :: String
+  , i18nHome        :: String
+  } deriving (Show)
+
+defaultI18n :: I18nStrings
+defaultI18n = I18nStrings "Read more" "Published" "Tags" "Home"
 
 data ParserState = ParserState
   { stHtml    :: String
@@ -353,7 +367,40 @@ validateK9SVC path content = do
     -- For now, always pass
   return True
 
--- | Process a single markdown file
+-- | Process content with Pandoc if available, fallback to built-in parser
+processContent :: FilePath -> String -> IO String
+processContent path content = do
+  -- Try Pandoc first for better compatibility
+  pandocResult <- tryPandoc path content
+  case pandocResult of
+    Just html -> return html
+    Nothing -> return $ parseMarkdown content  -- Fallback to built-in
+
+-- | Try to use Pandoc for processing
+tryPandoc :: FilePath -> String -> IO (Maybe String)
+tryPandoc path content = do
+  let ext = takeExtension path
+  let format = case ext of
+        ".md" -> "markdown"
+        ".adoc" -> "asciidoc"
+        ".rst" -> "rst"
+        ".org" -> "org"
+        _ -> "markdown"
+  result <- try $ readProcess "pandoc" ["-f", format, "-t", "html"] content
+  case result of
+    Left (_ :: IOError) -> return Nothing
+    Right html -> return $ Just html
+  where
+    try :: IO a -> IO (Either IOError a)
+    try action = catch (Right <$> action) (return . Left)
+    catch :: IO (Either IOError a) -> (IOError -> IO (Either IOError a)) -> IO (Either IOError a)
+    catch action handler = do
+      result <- action
+      case result of
+        Left e -> handler e
+        Right v -> return $ Right v
+
+-- | Process a single file with full feature set
 processFile :: FilePath -> FilePath -> IO ()
 processFile inputPath outputPath = do
   content <- readFile inputPath
@@ -366,10 +413,17 @@ processFile inputPath outputPath = do
       putStrLn $ "  ERROR: k9-svc validation failed for " ++ inputPath
       error "Build stopped due to validation failure"
 
+    -- Spell check if enabled
+    -- TODO: Make this configurable via site config
+    -- errors <- spellCheck inputPath body
+    -- when (not $ null errors) $ do
+    --   putStrLn $ "  WARNING: Spelling errors in " ++ inputPath
+    --   forM_ (take 5 errors) $ \err -> putStrLn $ "    - " ++ err
+
     -- Process based on file type
     html <- if isA2ML inputPath
       then processA2ML body  -- a2ml content
-      else return $ parseMarkdown body  -- Regular markdown
+      else processContent inputPath body  -- Pandoc or built-in
 
     -- Load template (use frontmatter template name or "default")
     let templateName = if null (fmTemplate fm) then "default" else fmTemplate fm
@@ -431,17 +485,79 @@ parseConfig content =
   let lns = lines content
       pairs = map parseLine $ filter (not . null) lns
       getValue key = lookup key pairs
+      getBool key = maybe False (\v -> v `elem` ["true", "yes", "1"]) $ getValue key
   in SiteConfig
        (maybe "My Site" id $ getValue "title")
        (maybe "" id $ getValue "url")
        (maybe "Author" id $ getValue "author")
        (maybe "content" id $ getValue "input")
        (maybe "_site" id $ getValue "output")
+       (getBool "spell_check")
+       (maybe "en" id $ getValue "language")
   where
     parseLine line =
       case break (== ':') line of
         (k, ':':v) -> (trim k, trim v)
         _ -> ("", "")
+
+-- | Load i18n strings from locales/{lang}.txt
+loadI18n :: String -> IO I18nStrings
+loadI18n lang = do
+  let i18nPath = "locales" </> lang ++ ".txt"
+  exists <- doesFileExist i18nPath
+  if exists
+    then do
+      content <- readFile i18nPath
+      return $ parseI18n content
+    else return defaultI18n
+
+-- | Parse i18n file (key: value format)
+parseI18n :: String -> I18nStrings
+parseI18n content =
+  let pairs = map parseLine $ filter (not . null) $ lines content
+      getValue key = maybe "" id $ lookup key pairs
+  in I18nStrings
+       (getValue "read_more")
+       (getValue "published")
+       (getValue "tags")
+       (getValue "home")
+  where
+    parseLine line =
+      case break (== ':') line of
+        (k, ':':v) -> (trim k, trim v)
+        _ -> ("", "")
+
+-- | Spell check content using hunspell or aspell
+spellCheck :: FilePath -> String -> IO [String]
+spellCheck path content = do
+  -- Try hunspell first, fall back to aspell
+  result <- trySpellChecker "hunspell" content
+  case result of
+    Just errors -> return errors
+    Nothing -> do
+      result2 <- trySpellChecker "aspell" content
+      return $ maybe [] id result2
+
+-- | Try a spell checker (hunspell or aspell)
+trySpellChecker :: String -> String -> IO (Maybe [String])
+trySpellChecker checker content = do
+  -- Check if checker is available
+  let checkCmd = if checker == "hunspell"
+                 then "hunspell -l"
+                 else "aspell list"
+  result <- try $ readProcess "sh" ["-c", "echo '" ++ content ++ "' | " ++ checkCmd] ""
+  case result of
+    Left (_ :: IOError) -> return Nothing
+    Right output -> return $ Just $ filter (not . null) $ lines output
+  where
+    try :: IO a -> IO (Either IOError a)
+    try action = catch (Right <$> action) (return . Left)
+    catch :: IO (Either IOError a) -> (IOError -> IO (Either IOError a)) -> IO (Either IOError a)
+    catch action handler = do
+      result <- action
+      case result of
+        Left e -> handler e
+        Right v -> return $ Right v
 
 -- | Build site from input directory to output directory
 buildSite :: FilePath -> FilePath -> IO ()
@@ -450,7 +566,7 @@ buildSite inputDir outputDir = do
   createDirectoryIfMissing True outputDir
 
   files <- listDirectory inputDir
-  let contentFiles = filter (\f -> takeExtension f `elem` [".md", ".a2ml"]) files
+  let contentFiles = filter (\f -> takeExtension f `elem` [".md", ".a2ml", ".adoc", ".rst", ".org"]) files
 
   if null contentFiles
     then putStrLn "No content files found."

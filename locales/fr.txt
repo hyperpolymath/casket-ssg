@@ -1,0 +1,5 @@
+# French translations
+read_more: Lire la suite
+published: Publié
+tags: Tags
+home: Accueil
