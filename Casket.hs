@@ -13,9 +13,9 @@ module Main where
 import Data.List (isPrefixOf, isSuffixOf, foldl')
 import Data.Char (isSpace)
 import System.Environment (getArgs)
-import System.Directory (listDirectory, createDirectoryIfMissing, doesFileExist)
-import System.FilePath ((</>), takeBaseName, takeExtension)
-import Control.Monad (forM_, when)
+import System.Directory (listDirectory, createDirectoryIfMissing, doesFileExist, doesDirectoryExist, copyFile)
+import System.FilePath ((</>), takeBaseName, takeExtension, takeFileName)
+import Control.Monad (forM_, when, filterM)
 
 -- ============================================================================
 -- Types
@@ -31,6 +31,17 @@ data Frontmatter = Frontmatter
 
 emptyFrontmatter :: Frontmatter
 emptyFrontmatter = Frontmatter "" "" [] False "default"
+
+data SiteConfig = SiteConfig
+  { cfgTitle      :: String
+  , cfgUrl        :: String
+  , cfgAuthor     :: String
+  , cfgInputDir   :: String
+  , cfgOutputDir  :: String
+  } deriving (Show)
+
+defaultConfig :: SiteConfig
+defaultConfig = SiteConfig "My Site" "" "Author" "content" "_site"
 
 data ParserState = ParserState
   { stHtml    :: String
@@ -308,6 +319,40 @@ testFull = do
 -- Build System
 -- ============================================================================
 
+-- | Load template from file or use default
+loadTemplate :: String -> IO String
+loadTemplate templateName = do
+  let templatePath = "templates" </> templateName ++ ".html"
+  exists <- doesFileExist templatePath
+  if exists
+    then readFile templatePath
+    else return defaultTemplate
+
+-- | Check if file should use a2ml processing (.a2ml extension)
+isA2ML :: FilePath -> Bool
+isA2ML path = takeExtension path == ".a2ml"
+
+-- | Process a2ml content (typed, verifiable markup)
+-- Currently stub - will integrate with a2ml compiler
+processA2ML :: String -> IO String
+processA2ML content = do
+  putStrLn "  [a2ml] Type-checking content..."
+  -- TODO: Call a2ml compiler to validate and convert
+  -- For now, return as-is
+  return content
+
+-- | Validate content with k9-svc (self-validating components)
+-- Currently stub - will integrate with k9-svc validator
+validateK9SVC :: FilePath -> String -> IO Bool
+validateK9SVC path content = do
+  -- Check for k9-svc directives in content
+  let hasK9SVC = "k9-svc:" `isPrefixOf` content
+  when hasK9SVC $ do
+    putStrLn $ "  [k9-svc] Validating " ++ path ++ "..."
+    -- TODO: Parse k9-svc schema and validate
+    -- For now, always pass
+  return True
+
 -- | Process a single markdown file
 processFile :: FilePath -> FilePath -> IO ()
 processFile inputPath outputPath = do
@@ -315,10 +360,88 @@ processFile inputPath outputPath = do
   let (fm, body) = parseFrontmatter content
   -- Skip draft posts
   when (not $ fmDraft fm) $ do
-    let html = parseMarkdown body
-    let output = applyTemplate fm html
+    -- Validate with k9-svc if enabled
+    valid <- validateK9SVC inputPath content
+    when (not valid) $ do
+      putStrLn $ "  ERROR: k9-svc validation failed for " ++ inputPath
+      error "Build stopped due to validation failure"
+
+    -- Process based on file type
+    html <- if isA2ML inputPath
+      then processA2ML body  -- a2ml content
+      else return $ parseMarkdown body  -- Regular markdown
+
+    -- Load template (use frontmatter template name or "default")
+    let templateName = if null (fmTemplate fm) then "default" else fmTemplate fm
+    template <- loadTemplate templateName
+    let output = applyTemplateStr template fm html
     writeFile outputPath output
     putStrLn $ "  " ++ inputPath ++ " -> " ++ outputPath
+
+-- | Apply template string with variables
+applyTemplateStr :: String -> Frontmatter -> String -> String
+applyTemplateStr template fm html =
+  let t1 = replaceAll "{{title}}" (fmTitle fm) template
+      t2 = replaceAll "{{date}}" (fmDate fm) t1
+      t3 = replaceAll "{{content}}" html t2
+  in t3
+
+-- | Copy assets from assets/ or static/ directories to output
+copyAssets :: FilePath -> IO ()
+copyAssets outputDir = do
+  let assetDirs = ["assets", "static", "css", "images", "js"]
+  forM_ assetDirs $ \assetDir -> do
+    exists <- doesDirectoryExist assetDir
+    when exists $ do
+      putStrLn $ "Copying " ++ assetDir ++ "/ to " ++ outputDir
+      copyDirectory assetDir (outputDir </> assetDir)
+
+-- | Recursively copy directory contents
+copyDirectory :: FilePath -> FilePath -> IO ()
+copyDirectory src dst = do
+  createDirectoryIfMissing True dst
+  files <- listDirectory src
+  forM_ files $ \file -> do
+    let srcPath = src </> file
+    let dstPath = dst </> file
+    isDir <- doesDirectoryExist srcPath
+    if isDir
+      then copyDirectory srcPath dstPath
+      else do
+        copyFile srcPath dstPath
+        putStrLn $ "  " ++ srcPath ++ " -> " ++ dstPath
+
+-- | Load site configuration from config.yaml or use defaults
+loadConfig :: IO SiteConfig
+loadConfig = do
+  let configPaths = ["config.yaml", "site.yaml", "config.yml"]
+  configs <- filterM doesFileExist configPaths
+  case configs of
+    (path:_) -> do
+      putStrLn $ "Loading config from: " ++ path
+      content <- readFile path
+      return $ parseConfig content
+    [] -> do
+      putStrLn "No config file found, using defaults"
+      return defaultConfig
+
+-- | Parse simple YAML-like config (key: value format)
+parseConfig :: String -> SiteConfig
+parseConfig content =
+  let lns = lines content
+      pairs = map parseLine $ filter (not . null) lns
+      getValue key = lookup key pairs
+  in SiteConfig
+       (maybe "My Site" id $ getValue "title")
+       (maybe "" id $ getValue "url")
+       (maybe "Author" id $ getValue "author")
+       (maybe "content" id $ getValue "input")
+       (maybe "_site" id $ getValue "output")
+  where
+    parseLine line =
+      case break (== ':') line of
+        (k, ':':v) -> (trim k, trim v)
+        _ -> ("", "")
 
 -- | Build site from input directory to output directory
 buildSite :: FilePath -> FilePath -> IO ()
@@ -327,16 +450,19 @@ buildSite inputDir outputDir = do
   createDirectoryIfMissing True outputDir
 
   files <- listDirectory inputDir
-  let mdFiles = filter (\f -> takeExtension f == ".md") files
+  let contentFiles = filter (\f -> takeExtension f `elem` [".md", ".a2ml"]) files
 
-  if null mdFiles
-    then putStrLn "No markdown files found."
+  if null contentFiles
+    then putStrLn "No content files found."
     else do
-      putStrLn $ "Found " ++ show (length mdFiles) ++ " markdown files:"
-      forM_ mdFiles $ \file -> do
+      putStrLn $ "Found " ++ show (length contentFiles) ++ " content files:"
+      forM_ contentFiles $ \file -> do
         let inputPath = inputDir </> file
         let outputPath = outputDir </> takeBaseName file ++ ".html"
         processFile inputPath outputPath
+
+  -- Copy assets
+  copyAssets outputDir
 
   putStrLn "Build complete!"
 

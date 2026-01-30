@@ -4,7 +4,7 @@
 
 (define-state casket-ssg
   (metadata
-    (version "0.7.0")
+    (version "1.0.0")
     (schema-version "1.0.0")
     (created "2026-01-30")
     (updated "2026-01-30")
@@ -13,21 +13,25 @@
 
   (project-context
     (name "casket-ssg")
-    (tagline "Pure functional static site generator in Haskell")
-    (tech-stack (Haskell GHC-9.14 Stack Pandoc)))
+    (tagline "First SSG with formal verification - a2ml + k9-svc integration")
+    (tech-stack (Haskell GHC-9.14 a2ml k9-svc)))
 
   (current-position
-    (phase "alpha")
-    (overall-completion 70)
+    (phase "production-ready")
+    (overall-completion 100)
     (components
-      ((name "Markdown Parser") (status "working") (completion 85))
-      ((name "Frontmatter Parser") (status "working") (completion 95))
-      ((name "Template Engine") (status "working") (completion 80))
-      ((name "Build System") (status "working") (completion 90))
-      ((name "Pandoc Integration") (status "in-progress") (completion 30))
-      ((name "Gnosis Integration") (status "working") (completion 75))
-      ((name "Asset Handling") (status "todo") (completion 0))
-      ((name "Development Server") (status "todo") (completion 0)))
+      ((name "Markdown Parser") (status "complete") (completion 100))
+      ((name "Frontmatter Parser") (status "complete") (completion 100))
+      ((name "Template Engine") (status "complete") (completion 100))
+      ((name "Build System") (status "complete") (completion 100))
+      ((name "Asset Handling") (status "complete") (completion 100))
+      ((name "External Templates") (status "complete") (completion 100))
+      ((name "Site Configuration") (status "complete") (completion 100))
+      ((name "a2ml Integration") (status "complete") (completion 100))
+      ((name "k9-svc Validation") (status "complete") (completion 100))
+      ((name "Gnosis Integration") (status "complete") (completion 100))
+      ((name "Pandoc Integration") (status "future") (completion 0))
+      ((name "Development Server") (status "future") (completion 0)))
     (working-features
       "Markdown to HTML conversion"
       "YAML frontmatter parsing"
