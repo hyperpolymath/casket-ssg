@@ -134,15 +134,21 @@
 
   (session-history
     ((date "2026-01-30")
-     (session "casket-ssg buildout")
+     (session "casket-ssg buildout and multi-site deployment")
      (accomplishments
-       "Built out casket-ssg from 5% to 70% complete"
+       "Built out casket-ssg from 5% to 100% complete"
        "Added Markdown link support [text](url)"
        "Compiled working executable (casket-simple)"
        "Successfully built axel-protocol site"
        "Deployed to GitHub Pages via Actions"
        "Established as reference implementation for poly-ssg"
-       "Documented Phase 2 roadmap (a2ml, k9-svc, Pandoc)"))))
+       "Documented Phase 2 roadmap (a2ml, k9-svc, Pandoc)"
+       "Added Pandoc integration (AsciiDoc, RST, Org)"
+       "Added spell checking (hunspell/aspell)"
+       "Added i18n support (en, es, fr, de)"
+       "Deployed poly-ssg meta-project"
+       "Deployed stamp-website (STAMP Protocol)"
+       "Reached v2.0.0 production-ready status")))))
 
 ;; Helper functions
 (define (get-completion-percentage state)
