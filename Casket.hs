@@ -111,6 +111,16 @@ processInline :: String -> String
 processInline = go False False
   where
     go _ _ [] = []
+    go bold ital ('[':rest) =
+      -- Try to parse markdown link [text](url)
+      let (text, afterText) = span (/= ']') rest
+      in case afterText of
+        (']':'(':moreRest) ->
+          let (url, afterUrl) = span (/= ')') moreRest
+          in case afterUrl of
+            (')':remaining) -> "<a href=\"" ++ url ++ "\">" ++ text ++ "</a>" ++ go bold ital remaining
+            _ -> '[' : go bold ital rest
+        _ -> '[' : go bold ital rest
     go bold ital ('*':'*':rest)
       | bold      = "</strong>" ++ go False ital rest
       | otherwise = "<strong>" ++ go True ital rest

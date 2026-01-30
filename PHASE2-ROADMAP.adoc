@@ -1,0 +1,204 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+// SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell <jonathan.jewell@open.ac.uk>
+
+= Casket-SSG Phase 2 Roadmap
+:toc: left
+:toclevels: 3
+:icons: font
+
+Phase 2 focuses on making casket-ssg the **first SSG with formal verification built-in** through a2ml and k9-svc integration.
+
+== Current Status (Phase 1 Complete)
+
+✅ *70% Complete - Alpha Quality*
+
+*Working Features:*
+- Markdown to HTML conversion
+- Frontmatter parsing (YAML)
+- Template system with variable substitution
+- Links, headers, lists, code blocks
+- Build pipeline (content → _site)
+- Gnosis 6scm metadata integration
+- Draft post filtering
+- Index generation
+
+*Deployed:*
+- axel-protocol.org running on casket-ssg
+- GitHub Actions automated deployment
+- Reference implementation for poly-ssg ecosystem
+
+== Phase 2 Goals
+
+Make casket-ssg the **gold standard for type-safe, verifiable static sites**.
+
+=== 1. a2ml Integration (Typed Markup)
+
+*What:* Support `.a2ml` files as content format
+
+*Why:* Protocol specifications and technical docs need formal correctness
+
+*Features:*
+- Type-check content at build time
+- Validate DNS records, API formats, protocol specs
+- Compiler errors for incorrect examples
+- Self-documenting types in HTML output
+
+*Example Use Case (axel-protocol):*
+[source,a2ml]
+----
+type DNSRecord = {
+  name: String,
+  type: Enum["A", "AAAA", "TXT", "MX"],
+  value: String
+}
+
+# AXEL DNS Configuration
+axel_record : DNSRecord = {
+  name: "_axel._sts.example.com",
+  type: "TXT",
+  value: "v=AXEL1; mode=enforce"
+}
+----
+
+If `type` is misspelled or `value` format is wrong, **build fails** with compiler error.
+
+=== 2. k9-svc Integration (Self-Validating Components)
+
+*What:* Files validate themselves before build
+
+*Why:* Catch errors at compile-time, not when users find them
+
+*Features:*
+- Content files declare validation rules
+- Build stops if validation fails
+- Schema enforcement for governance docs
+- Required section checks
+
+*Example Use Case (axel-protocol GOVERNANCE.adoc):*
+[source,adoc]
+----
+// k9-svc: schema=governance-doc-v1
+// k9-svc: require-sections=["Membership", "Decision Making", "Code of Conduct"]
+// k9-svc: validate-email-addresses=true
+
+= AXEL Protocol Governance
+
+[if missing sections or invalid emails, build fails with specific errors]
+----
+
+=== 3. Complete Pandoc Integration
+
+*Status:* In Progress (30% complete)
+
+*Remaining Work:*
+- Finish Pandoc dependency integration
+- Add AsciiDoc reader support
+- Improve table rendering
+- Math formula support (KaTeX/MathJax)
+- Custom Pandoc filters
+
+=== 4. Asset Handling
+
+*What:* Automatic copying of CSS, images, fonts
+
+*How:*
+- Detect `assets/` or `static/` directory
+- Copy to `_site/` during build
+- Optionally minify CSS/JS
+- Image optimization (optional)
+
+=== 5. External Template System
+
+*Current:* Templates hardcoded in Haskell
+
+*Phase 2:* Load templates from `templates/` directory
+
+*Template Format:* Mustache or similar
+
+*Example:*
+[source,mustache]
+----
+<!DOCTYPE html>
+<html>
+<head>
+  <title>{{title}}</title>
+  {{#if description}}
+  <meta name="description" content="{{description}}">
+  {{/if}}
+</head>
+<body>
+  {{{content}}}
+</body>
+</html>
+----
+
+=== 6. Site Configuration File
+
+*Format:* YAML or Nickel (prefer Nickel for validation)
+
+*Example (site.ncl):*
+[source,nickel]
+----
+{
+  title = "AXEL Protocol",
+  url = "https://axel-protocol.org",
+  author = {
+    name = "ASPEC Consortium",
+    email = "info@axel-protocol.org"
+  },
+  build = {
+    input = "content",
+    output = "_site",
+    template = "templates/default.html"
+  },
+  features = {
+    rss = true,
+    sitemap = true,
+    a2ml = true,
+    k9_svc = true
+  }
+}
+----
+
+== Timeline
+
+*Week 1-2:* Pandoc completion, asset handling
+*Week 3-4:* a2ml integration
+*Week 5-6:* k9-svc integration
+*Week 7-8:* External templates, site config
+
+== Success Criteria
+
+Phase 2 is complete when:
+
+1. ✅ axel-protocol.org builds with a2ml protocol specs
+2. ✅ Governance docs validate with k9-svc
+3. ✅ AsciiDoc content renders perfectly
+4. ✅ CSS/images copy automatically
+5. ✅ Templates load from files
+6. ✅ Site configuration works
+7. ✅ Documentation explains all features
+
+== Why This Matters
+
+*For hyperpolymath ecosystem:*
+- Protocol specs (AXEL, others) are **provably correct**
+- Governance docs **enforce required structure**
+- Technical documentation is **type-safe**
+
+*For poly-ssg:*
+- casket-ssg becomes **reference implementation**
+- Other engines (rescribe, ddraig, estate) follow this model
+- First SSG with **formal verification**
+
+*For the SSG landscape:*
+- Raises the bar for what SSGs can do
+- Shows that **types and proofs** belong in content tools
+- Makes "site generation" a **verified process**
+
+== Resources
+
+- a2ml repo: https://github.com/hyperpolymath/a2ml
+- k9-svc repo: https://github.com/hyperpolymath/k9-svc
+- poly-ssg: https://github.com/hyperpolymath/poly-ssg
+- Pandoc: https://pandoc.org/

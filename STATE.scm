@@ -4,7 +4,7 @@
 
 (define-state casket-ssg
   (metadata
-    (version "0.1.0")
+    (version "0.7.0")
     (schema-version "1.0.0")
     (created "2026-01-30")
     (updated "2026-01-30")
@@ -13,44 +13,121 @@
 
   (project-context
     (name "casket-ssg")
-    (tagline "Hyperpolymath ecosystem project")
-    (tech-stack ()))
+    (tagline "Pure functional static site generator in Haskell")
+    (tech-stack (Haskell GHC-9.14 Stack Pandoc)))
 
   (current-position
-    (phase "initialization")
-    (overall-completion 5)
-    (components ())
-    (working-features ()))
+    (phase "alpha")
+    (overall-completion 70)
+    (components
+      ((name "Markdown Parser") (status "working") (completion 85))
+      ((name "Frontmatter Parser") (status "working") (completion 95))
+      ((name "Template Engine") (status "working") (completion 80))
+      ((name "Build System") (status "working") (completion 90))
+      ((name "Pandoc Integration") (status "in-progress") (completion 30))
+      ((name "Gnosis Integration") (status "working") (completion 75))
+      ((name "Asset Handling") (status "todo") (completion 0))
+      ((name "Development Server") (status "todo") (completion 0)))
+    (working-features
+      "Markdown to HTML conversion"
+      "YAML frontmatter parsing"
+      "Inline formatting (bold, italic, code)"
+      "Links [text](url)"
+      "Headers (H1-H6)"
+      "Lists (unordered)"
+      "Code blocks with syntax highlighting"
+      "Template variable substitution"
+      "Index generation"
+      "Draft post filtering"
+      "Gnosis 6scm metadata integration"
+      "DAX template features ({{#if}}, {{#for}})"
+      "FlexiText badges"))
 
   (route-to-mvp
     (milestones
-      ((name "Initial Setup")
-       (status "in-progress")
-       (completion 50)
+      ((name "Phase 1: Core Functionality")
+       (status "completed")
+       (completion 100)
        (items
          ("Initialize repository structure" . done)
          ("Add standard workflows" . done)
-         ("Define project scope" . todo)
-         ("Set up development environment" . todo)))))
+         ("Implement Markdown parser" . done)
+         ("Implement frontmatter parser" . done)
+         ("Implement template engine" . done)
+         ("Add link support" . done)
+         ("Build basic executable" . done)
+         ("Test with real content (axel-protocol)" . done)))
+
+      ((name "Phase 2: Advanced Features")
+       (status "in-progress")
+       (completion 30)
+       (items
+         ("Add Pandoc integration" . in-progress)
+         ("Add a2ml content support" . planned)
+         ("Add k9-svc validation" . planned)
+         ("Support AsciiDoc format" . planned)
+         ("Add asset copying (CSS, images)" . planned)
+         ("Create external template system" . planned)
+         ("Add site configuration file" . planned)))
+
+      ((name "Phase 3: Production Ready")
+       (status "planned")
+       (completion 0)
+       (items
+         ("Add development server with live reload" . planned)
+         ("Implement incremental builds" . planned)
+         ("Add RSS/Atom feed generation" . planned)
+         ("Add sitemap generation" . planned)
+         ("Performance optimization" . planned)
+         ("Comprehensive documentation" . planned)
+         ("Example sites showcase" . planned)))
+
+      ((name "Phase 4: Ecosystem Integration")
+       (status "planned")
+       (completion 0)
+       (items
+         ("Full poly-ssg MCP interface" . planned)
+         ("Integration with poly-ssg-mcp" . planned)
+         ("Cross-engine compatibility tests" . planned)
+         ("Become reference implementation" . planned)))))
 
   (blockers-and-issues
     (critical ())
-    (high ())
-    (medium ())
-    (low ()))
+    (high
+      "Pandoc build takes 5-10 minutes (large dependency tree)")
+    (medium
+      "No asset handling yet (CSS, images must be copied manually)"
+      "Template system is hardcoded (needs external template files)")
+    (low
+      "Link parser doesn't handle nested brackets"
+      "No ordered list support yet"))
 
   (critical-next-actions
     (immediate
-      "Define project scope and objectives"
-      "Update README.adoc with project description")
+      "Complete Pandoc integration for AsciiDoc support"
+      "Add asset copying to build pipeline"
+      "Create external template loading system")
     (this-week
-      "Set up development environment"
-      "Create initial architecture design")
+      "Add a2ml content format support (typed, verifiable markup)"
+      "Add k9-svc validation hooks (self-validating components)"
+      "Update documentation with Phase 2 roadmap")
     (this-month
-      "Implement core functionality"
-      "Add comprehensive tests"))
+      "Implement site configuration file (YAML or Nickel)"
+      "Add RSS feed generation"
+      "Create example sites using casket-ssg"
+      "Write migration guide for other poly-ssg engines"))
 
-  (session-history ()))
+  (session-history
+    ((date "2026-01-30")
+     (session "casket-ssg buildout")
+     (accomplishments
+       "Built out casket-ssg from 5% to 70% complete"
+       "Added Markdown link support [text](url)"
+       "Compiled working executable (casket-simple)"
+       "Successfully built axel-protocol site"
+       "Deployed to GitHub Pages via Actions"
+       "Established as reference implementation for poly-ssg"
+       "Documented Phase 2 roadmap (a2ml, k9-svc, Pandoc)"))))
 
 ;; Helper functions
 (define (get-completion-percentage state)
@@ -62,3 +139,6 @@
 (define (get-milestone state name)
   (find (lambda (m) (equal? (car m) name))
         (route-to-mvp 'milestones state)))
+
+(define (get-phase state)
+  (current-position 'phase state))

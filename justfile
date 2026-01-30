@@ -8,11 +8,13 @@ default:
 
 # Build the project
 build:
-    @echo "Build not configured yet"
+    stack build
 
-# Run tests
+# Build and run on test content
 test:
-    @echo "Tests not configured yet"
+    stack build
+    stack exec casket-ssg build test-features/input test-features/output
+    @echo "Output generated in test-features/output/"
 
 # Format code
 fmt:
