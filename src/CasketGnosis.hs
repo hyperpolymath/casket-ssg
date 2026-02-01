@@ -20,6 +20,8 @@ import qualified Gnosis.Render as Render
 import qualified Gnosis.DAX as DAX
 import qualified Gnosis.Types as Types
 import qualified Data.Map.Strict as Map
+import qualified Text.Pandoc as Pandoc
+import qualified Data.Text as T
 
 -- | Main entry point for casket-ssg with Gnosis
 main :: IO ()
@@ -103,11 +105,24 @@ processFileWithGnosis ctx inputPath outputPath = do
     -- This renders remaining 6scm placeholders and applies filters
     let withPlaceholders = Render.renderWithBadges mergedCtx withDAX
 
-    -- Step 3: Wrap in simple HTML template
-    let html = wrapInTemplate pageTitle withPlaceholders
+    -- Step 3: Convert Markdown to HTML using Pandoc
+    htmlContent <- markdownToHtml withPlaceholders
+
+    -- Step 4: Wrap in simple HTML template
+    let html = wrapInTemplate pageTitle htmlContent
 
     -- Write output
     writeFile outputPath html
+
+-- | Convert Markdown to HTML using Pandoc
+markdownToHtml :: String -> IO String
+markdownToHtml markdown = do
+    let readerOpts = Pandoc.def
+    let writerOpts = Pandoc.def
+    result <- Pandoc.runIOorExplode $ do
+        doc <- Pandoc.readMarkdown readerOpts (T.pack markdown)
+        Pandoc.writeHtml5String writerOpts doc
+    return (T.unpack result)
 
 -- | Wrap content in simple HTML template
 wrapInTemplate :: String -> String -> String

@@ -32,6 +32,8 @@ executable casket-ssg
                     , time >= 1.9
                     , directory >= 1.3
                     , filepath >= 1.4
+                    , pandoc >= 3.0
+                    , pandoc-types >= 1.23
 
 source-repository head
     type:     git
