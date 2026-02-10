@@ -18,7 +18,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
 
       - name: Setup Haskell
         uses: haskell-actions/setup@33c6834e5a4ec21f93e28ca2d2c03d1c3414cc8c # v2
@@ -61,7 +61,7 @@ jobs:
 
       - name: Attach SBOM to release
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631 # v2
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b # v2
         with:
           files: |
             cyclonedx-sbom.json
