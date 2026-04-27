@@ -1,0 +1,24 @@
+# Casket-SSG Configuration Example
+# Copy to config.yaml and customize
+
+# Site metadata
+title: My Site
+url: https://example.com
+author: Your Name
+
+# Build settings
+input: content
+output: _site
+
+# Language & i18n
+language: en  # Options: en, es, fr, de (add more in locales/)
+
+# Features
+spell_check: true   # Enable spell checking (requires hunspell or aspell)
+
+# Supported formats:
+# - .md (Markdown)
+# - .adoc (AsciiDoc via Pandoc)
+# - .rst (reStructuredText via Pandoc)
+# - .org (Org-mode via Pandoc)
+# - .a2ml (Attested Markup Language - typed, verifiable)

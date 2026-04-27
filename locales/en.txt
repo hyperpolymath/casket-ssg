@@ -1,0 +1,5 @@
+# English translations
+read_more: Read more
+published: Published
+tags: Tags
+home: Home
