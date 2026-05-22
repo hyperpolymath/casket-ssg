@@ -2,7 +2,7 @@
 Module      : Paxos
 Description : Paxos-Lite conflict resolution for concurrent STATE.scm updates
 Copyright   : (c) 2025-2026 Jonathan D.A. Jewell
-License     : PMPL-1.0-or-later
+License     : MPL-2.0
 Maintainer  : hyperpolymath
 
 Paxos-Lite uses timestamp-based ballot numbers for last-write-wins

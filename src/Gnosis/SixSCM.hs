@@ -2,7 +2,7 @@
 Module      : SixSCM
 Description : Load all 6 SCM files (STATE, ECOSYSTEM, META, NEUROSYM, AGENTIC, PLAYBOOK)
 Copyright   : (c) 2025-2026 Jonathan D.A. Jewell
-License     : PMPL-1.0-or-later
+License     : MPL-2.0
 Maintainer  : hyperpolymath
 
 The 6scm standard consists of 6 Scheme metadata files that provide

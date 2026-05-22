@@ -5,7 +5,7 @@ synopsis:           Pure functional static site generator in Haskell
 description:        A Hakyll-inspired static site generator showcasing Haskell's
                     pure functions, pattern matching, and lazy evaluation for
                     elegant site generation with compile-time template validation.
-license:            PMPL-1.0-or-later
+license:            MPL-2.0
 license-file:       LICENSE
 author:             Jonathan D.A. Jewell
 maintainer:         j.d.a.jewell@open.ac.uk

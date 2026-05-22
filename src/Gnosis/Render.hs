@@ -2,7 +2,7 @@
 Module      : Render
 Description : Template rendering engine with Tri-Guard safety
 Copyright   : (c) 2025-2026 Jonathan D.A. Jewell
-License     : PMPL-1.0-or-later
+License     : MPL-2.0
 Maintainer  : hyperpolymath
 
 This module implements the core rendering logic that transforms

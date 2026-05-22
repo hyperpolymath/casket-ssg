@@ -22,4 +22,4 @@ casket-ssg build <input-dir> [output-dir]
 
 ## License
 
-PMPL-1.0-or-later
+MPL-2.0

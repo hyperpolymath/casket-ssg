@@ -2,7 +2,7 @@
 Module      : CasketGnosis
 Description : Casket-SSG enhanced with Gnosis metadata-driven rendering
 Copyright   : (c) 2025-2026 Jonathan D.A. Jewell
-License     : PMPL-1.0-or-later
+License     : MPL-2.0
 Maintainer  : hyperpolymath
 
 Casket-SSG with Gnosis integration for 6scm metadata-driven static sites.

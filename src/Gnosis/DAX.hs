@@ -2,7 +2,7 @@
 Module      : DAX
 Description : DAX (Data eXpression) Era - Conditional rendering and basic logic
 Copyright   : (c) 2025-2026 Jonathan D.A. Jewell
-License     : PMPL-1.0-or-later
+License     : MPL-2.0
 Maintainer  : hyperpolymath
 
 DAX provides conditional rendering for templates based on metadata values.

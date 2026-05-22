@@ -2,7 +2,7 @@
 Module      : SExp
 Description : S-expression parser for Guile Scheme metadata files
 Copyright   : (c) 2025-2026 Jonathan D.A. Jewell
-License     : PMPL-1.0-or-later
+License     : MPL-2.0
 Maintainer  : hyperpolymath
 
 This module provides a recursive descent parser for S-expressions,
