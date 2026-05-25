@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: MPL-2.0
 {- |
 Module      : Paxos
 Description : Paxos-Lite conflict resolution for concurrent STATE.scm updates

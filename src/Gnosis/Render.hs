@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: MPL-2.0
 {- |
 Module      : Render
 Description : Template rendering engine with Tri-Guard safety

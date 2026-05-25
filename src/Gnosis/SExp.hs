@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: MPL-2.0
 {- |
 Module      : SExp
 Description : S-expression parser for Guile Scheme metadata files
