@@ -53,7 +53,8 @@ jobs:
           cp sbom-base.json cyclonedx-sbom.json
 
       - name: Upload SBOM
-        uses: actions/upload-artifact@ea165de6abb5050e17c80995d4e2caaec6d72898 # v4
+        # SHA fix 2026-05-25: previous pin did not exist upstream.
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: sbom-cyclonedx
           path: cyclonedx-sbom.json
