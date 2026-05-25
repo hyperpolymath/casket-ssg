@@ -22,7 +22,7 @@ jobs:
         # upstream repo — GitHub Actions failed to resolve it and every
         # CI run errored before any GHC step ran. This SHA is the same
         # one used elsewhere in this repo (sbom.yml, casket-ci.yml).
-        uses: haskell-actions/setup@33c6834e5a4ec21f93e28ca2d2c03d1c3414cc8c # v2.7.10
+        uses: haskell-actions/setup@cd0d9bdd65b20557f41bea4dbe43d0b5fbbfe553 # v2.11.0
         with:
           ghc-version: '9.4'
           cabal-version: '3.10'
