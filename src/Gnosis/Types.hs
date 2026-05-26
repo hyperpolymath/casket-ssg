@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: MPL-2.0
 {- |
 Module      : Types
 Description : Core types for the Gnosis rendering engine

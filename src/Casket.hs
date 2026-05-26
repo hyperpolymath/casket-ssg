@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: MPL-2.0
 {- HakyllLite.hs - Haskell-powered static site generator
 
    "HakyllLite" - Functional elegance in site generation

@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: MPL-2.0
 {- |
 Module      : DAX
 Description : DAX (Data eXpression) Era - Conditional rendering and basic logic

@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: MPL-2.0
 {- |
 Module      : SixSCM
 Description : Load all 6 SCM files (STATE, ECOSYSTEM, META, NEUROSYM, AGENTIC, PLAYBOOK)

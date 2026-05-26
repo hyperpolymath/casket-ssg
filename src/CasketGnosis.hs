@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: MPL-2.0
 {- |
 Module      : CasketGnosis
 Description : Casket-SSG enhanced with Gnosis metadata-driven rendering

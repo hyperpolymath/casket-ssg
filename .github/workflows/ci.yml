@@ -17,7 +17,12 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
 
       - name: Set up GHC
-        uses: haskell-actions/setup@dd344bc1cec854a9b2f7029b98379ce6c1accc98 # v2
+        # SHA pinned to v2.7.10 (current at 2026-05-25). The previous pin
+        # `dd344bc1cec854a9b2f7029b98379ce6c1accc98` did not exist on the
+        # upstream repo — GitHub Actions failed to resolve it and every
+        # CI run errored before any GHC step ran. This SHA is the same
+        # one used elsewhere in this repo (sbom.yml, casket-ci.yml).
+        uses: haskell-actions/setup@cd0d9bdd65b20557f41bea4dbe43d0b5fbbfe553 # v2.11.0
         with:
           ghc-version: '9.4'
           cabal-version: '3.10'
