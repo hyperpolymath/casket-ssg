@@ -19,6 +19,7 @@ jobs:
   build-and-test:
     name: Build and Test Casket-SSG + Gnosis
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
