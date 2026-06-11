@@ -1,25 +1,20 @@
 # SPDX-License-Identifier: MPL-2.0
 name: License Compliance
-
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
-
 permissions: read-all
-
 jobs:
   check-licenses:
     name: Check License Compliance
     runs-on: ubuntu-latest
     timeout-minutes: 15
-
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
-
       - name: Check SPDX headers
         run: |
           echo "Checking for SPDX license headers..."
@@ -45,7 +40,6 @@ jobs:
             echo "⚠️  Some files missing SPDX headers"
             exit 1
           fi
-
       - name: Verify LICENSE file
         run: |
           if [ ! -f LICENSE ]; then
@@ -58,7 +52,6 @@ jobs:
           else
             echo "⚠️  Unexpected license format"
           fi
-
       - name: Generate license report
         run: |
           echo "# License Compliance Report" > license-report.md
@@ -79,7 +72,6 @@ jobs:
           echo "- Workflow files: $with_spdx_workflows/$total_workflows with SPDX headers" >> license-report.md
 
           cat license-report.md
-
       - name: Upload license report
         # SHA fix 2026-05-25: previous pin did not exist upstream.
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

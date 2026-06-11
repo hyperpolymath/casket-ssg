@@ -1,6 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
 name: Release
-
 on:
   push:
     tags:
@@ -11,9 +10,7 @@ on:
         description: 'Version to release (e.g., 1.0.0)'
         required: true
         type: string
-
 permissions: read-all
-
 jobs:
   build:
     name: Build (${{ matrix.os }}-${{ matrix.arch }})
@@ -35,11 +32,9 @@ jobs:
           - os: darwin
             arch: aarch64
             runner: macos-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
       - name: Setup Haskell
         # SHA fix 2026-05-25: previous pin (dd344bc...74e) did not exist
         # upstream (`gh api repos/haskell-actions/setup/commits/<sha>` 422s).
@@ -48,7 +43,6 @@ jobs:
         with:
           ghc-version: '9.8'
           cabal-version: '3.12'
-
       - name: Cache Cabal
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
@@ -59,12 +53,10 @@ jobs:
           key: ${{ runner.os }}-${{ matrix.arch }}-cabal-${{ hashFiles('*.cabal', 'cabal.project') }}
           restore-keys: |
             ${{ runner.os }}-${{ matrix.arch }}-cabal-
-
       - name: Build
         run: |
           cabal update
           cabal build --enable-executable-static || cabal build
-
       - name: Package
         run: |
           VERSION="${{ github.event.inputs.version || github.ref_name }}"
@@ -106,7 +98,6 @@ jobs:
 
           echo "ARCHIVE=${ARCHIVE}" >> $GITHUB_ENV
           echo "VERSION=${VERSION}" >> $GITHUB_ENV
-
       - name: Upload artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -114,7 +105,6 @@ jobs:
           path: |
             dist/*.tar.gz
             dist/*.sha256
-
   release:
     name: Create Release
     needs: build
@@ -128,11 +118,9 @@ jobs:
         with:
           path: artifacts
           merge-multiple: true
-
       - name: List artifacts
         run: |
           find artifacts -type f
-
       - name: Create Release
         uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v2
         with:

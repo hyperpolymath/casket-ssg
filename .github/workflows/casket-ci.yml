@@ -1,6 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
 name: Casket-SSG CI
-
 on:
   push:
     branches: [main]
@@ -12,9 +11,7 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
-
 permissions: read-all
-
 jobs:
   build-and-test:
     name: Build and Test Casket-SSG + Gnosis
@@ -24,18 +21,15 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
         ghc: ['9.4.8', '9.6.6']
-
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
-
       - name: Setup Haskell
         uses: haskell-actions/setup@cd0d9bdd65b20557f41bea4dbe43d0b5fbbfe553 # v2.11.0
         with:
           ghc-version: ${{ matrix.ghc }}
           enable-stack: true
           stack-version: 'latest'
-
       - name: Cache Stack dependencies
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v4
         with:
@@ -46,10 +40,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-stack-${{ matrix.ghc }}-
             ${{ runner.os }}-stack-
-
       - name: Build casket-ssg
         run: stack build --test --no-run-tests
-
       - name: Test site generation with Gnosis
         run: |
           # Create test 6scm metadata
@@ -89,7 +81,6 @@ jobs:
           grep -q "testing" test-output/index.html || (echo "ERROR: phase not rendered" && exit 1)
 
           echo "✅ Site generation test passed"
-
       - name: Upload casket-ssg binary
         if: matrix.os == 'ubuntu-latest' && matrix.ghc == '9.6.6'
         # SHA pinned to v4.6.2 (matches the SHA used in hypatia-scan.yml,
