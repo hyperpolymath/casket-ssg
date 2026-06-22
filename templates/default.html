@@ -1,18 +1,23 @@
 <!DOCTYPE html>
 <!--
   SPDX-License-Identifier: MPL-2.0
-  casket-ssg default theme — semantic, responsive, dark-mode aware.
-  Substituted variables: title, date, brand, content (double-brace syntax).
+  Canonical accessible default template for casket-ssg / ddraig-ssg.
+  Target: WCAG 2.2 AAA on the engine-owned surface.
+  Variables (double-brace): title, brand, description, date, nav, toc, content.
+  content is substituted LAST so body HTML is never re-processed.
 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{title}}</title>
-  <meta name="generator" content="casket-ssg">
+  <meta name="description" content="{{description}}">
   <meta name="color-scheme" content="light dark">
+  <meta name="generator" content="casket-ssg">
   <link rel="stylesheet" href="/assets/style.css">
+  <link rel="stylesheet" href="/assets/highlight.css">
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="alternate" type="application/atom+xml" href="/feed.xml" title="{{brand}}">
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
@@ -20,24 +25,20 @@
   <header class="site-header">
     <nav class="container nav" aria-label="Primary">
       <a class="brand" href="/">{{brand}}</a>
-      <ul class="nav-links">
-        <li><a href="/">Home</a></li>
-        <li><a href="/spec.html">Spec</a></li>
-        <li><a href="/start.html">Get started</a></li>
-      </ul>
+      {{nav}}
     </nav>
   </header>
 
-  <main id="main" class="container">
+  <main id="main" class="container" tabindex="-1">
     <article class="prose">
+      {{toc}}
       {{content}}
     </article>
   </main>
 
   <footer class="site-footer">
-    <div class="container footer-grid">
-      <p class="muted">Built with <a href="https://github.com/hyperpolymath/casket-ssg">casket-ssg</a> · <time>{{date}}</time></p>
-      <p class="muted">© Jonathan D.A. Jewell · Code <a href="https://www.mozilla.org/MPL/2.0/">MPL-2.0</a>, docs <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC-BY-SA-4.0</a> · <a href="/.well-known/security.txt">security.txt</a></p>
+    <div class="container">
+      <p class="muted">Built with casket-ssg · <time>{{date}}</time></p>
     </div>
   </footer>
 </body>

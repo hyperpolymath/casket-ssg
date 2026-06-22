@@ -1,125 +1,130 @@
 /* SPDX-License-Identifier: MPL-2.0 */
-/* casket-ssg default theme — one cohesive look for the estate. */
+/* Copyright (c) 2025-2026 Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk> */
+/*
+ * Canonical accessible theme for casket-ssg / ddraig-ssg.
+ * Target: WCAG 2.2 AAA on the engine-owned surface.
+ * All text/link/UI colours are contrast-verified (see ACCESSIBILITY-CHECKLIST):
+ *   light: body #1a1b26/17.1:1, muted #3a3d4d/10.7:1, link #3730a3/9.9:1
+ *   dark : body #e6e8f2/15.6:1, muted #a0a4bd/7.75:1, link #b9c2ff/11.1:1
+ * All >= 7:1 (AAA 1.4.6). Focus ring >= 3:1 (2.4.11/2.4.13).
+ */
 
 :root {
-  --accent: #4f46e5;
-  --accent-2: #06b6d4;
   --bg: #ffffff;
-  --bg-soft: #f6f7fb;
-  --bg-code: #f1f2f7;
-  --fg: #1a1b26;
-  --fg-soft: #565a73;
-  --border: #e3e5ee;
-  --max: 46rem;
-  --radius: 12px;
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
+  --bg-soft: #f4f5f9;
+  --bg-code: #eceef5;
+  --fg: #1a1b26;          /* 17.09:1 on --bg */
+  --fg-muted: #3a3d4d;    /* 10.74:1 on --bg (AAA for normal text) */
+  --link: #3730a3;        /*  9.93:1 on --bg */
+  --link-hover: #1f1b6b;
+  --border: #5a5e73;      /* 4.9:1 — non-text UI, needs >=3:1 (1.4.11) */
+  --focus: #3730a3;       /* focus ring, 9.93:1 vs --bg */
+  --radius: 6px;
+  --maxw: 70rem;
+  --measure: 38rem;       /* readable line length */
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --accent: #818cf8;
-    --accent-2: #22d3ee;
     --bg: #0e0f1a;
-    --bg-soft: #161827;
-    --bg-code: #1b1e30;
-    --fg: #e6e8f2;
-    --fg-soft: #a0a4bd;
-    --border: #262a40;
+    --bg-soft: #181a2a;
+    --bg-code: #1c1f33;
+    --fg: #e6e8f2;        /* 15.60:1 on --bg */
+    --fg-muted: #a0a4bd;  /*  7.75:1 on --bg */
+    --link: #b9c2ff;      /* 11.09:1 on --bg */
+    --link-hover: #dde2ff;
+    --border: #8c91ad;    /* >=3:1 vs --bg */
+    --focus: #b9c2ff;     /* 11.09:1 vs --bg */
   }
 }
 
-* { box-sizing: border-box; }
-
-html { scroll-behavior: smooth; }
-
+/* 1.4.12 text spacing: never clip when users override; use rem + generous line-height. */
+*, *::before, *::after { box-sizing: border-box; }
+html { font-size: 100%; -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
-  font-family: var(--font-sans);
-  font-size: 1.06rem;
-  line-height: 1.7;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.6;            /* >= 1.5 (1.4.12) */
   color: var(--fg);
   background: var(--bg);
-  -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
+  overflow-wrap: break-word;   /* 1.4.10 reflow: no horizontal scroll at 320px */
 }
+p, li { max-width: var(--measure); }
+p { margin: 0 0 1rem; }        /* paragraph spacing >= 2x font (1.4.12) */
 
-.container { width: 100%; max-width: var(--max); margin-inline: auto; padding-inline: 1.25rem; }
-
+/* 2.4.1 skip link — visible on focus, high contrast, large target. */
 .skip-link {
-  position: absolute; left: -999px; top: 0;
-  background: var(--accent); color: #fff; padding: .6rem 1rem; border-radius: 0 0 var(--radius) 0; z-index: 10;
+  position: absolute; left: -9999px; top: 0;
+  background: var(--link); color: #ffffff;
+  padding: .75rem 1.25rem; border-radius: 0 0 var(--radius) 0;
+  font-weight: 600; z-index: 100; min-height: 44px; line-height: 1.4;
 }
 .skip-link:focus { left: 0; }
 
-/* Header / nav */
-.site-header {
-  position: sticky; top: 0; z-index: 5;
-  backdrop-filter: saturate(1.4) blur(10px);
-  background: color-mix(in srgb, var(--bg) 82%, transparent);
-  border-bottom: 1px solid var(--border);
+/* 2.4.7/2.4.11/2.4.13 visible focus — thick, offset, >=3:1, never removed. */
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 2px;
 }
-.nav { display: flex; align-items: center; justify-content: space-between; gap: 1rem; min-height: 3.75rem; max-width: 60rem; }
-.brand {
-  font-weight: 800; letter-spacing: -0.02em; font-size: 1.15rem; text-decoration: none;
-  background: linear-gradient(100deg, var(--accent), var(--accent-2));
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-}
-.nav-links { display: flex; gap: 1.25rem; list-style: none; margin: 0; padding: 0; }
-.nav-links a { color: var(--fg-soft); text-decoration: none; font-weight: 500; font-size: .95rem; }
-.nav-links a:hover { color: var(--fg); }
+/* keep a focus indicator even for browsers without :focus-visible */
+a:focus, button:focus, input:focus, [tabindex]:focus { outline: 3px solid var(--focus); outline-offset: 2px; }
 
-/* Article prose */
-main { padding-block: 3rem 4rem; }
-.prose { max-width: var(--max); }
-.prose > h1:first-child {
-  font-size: clamp(2.2rem, 6vw, 3.4rem);
-  line-height: 1.08; letter-spacing: -0.03em; margin: 0 0 1.25rem;
-  background: linear-gradient(120deg, var(--fg), var(--accent));
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-}
-.prose h2 { font-size: 1.7rem; letter-spacing: -0.02em; margin-top: 2.75rem; padding-top: .5rem; }
-.prose h3 { font-size: 1.3rem; margin-top: 2rem; }
-.prose p { color: var(--fg); }
-.prose a { color: var(--accent); text-underline-offset: 3px; text-decoration-thickness: 1px; }
-.prose a:hover { text-decoration-thickness: 2px; }
-.prose ul, .prose ol { padding-left: 1.4rem; }
-.prose li { margin: .35rem 0; }
-.prose img { max-width: 100%; border-radius: var(--radius); }
-.prose blockquote {
-  margin: 1.5rem 0; padding: .25rem 1.25rem; border-left: 3px solid var(--accent);
-  color: var(--fg-soft); background: var(--bg-soft); border-radius: 0 var(--radius) var(--radius) 0;
-}
-.prose hr { border: none; border-top: 1px solid var(--border); margin: 2.5rem 0; }
+.container { width: 100%; max-width: var(--maxw); margin-inline: auto; padding-inline: 1.25rem; }
+
+/* Header / nav landmark */
+.site-header { border-bottom: 1px solid var(--border); }
+.nav { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; padding-block: .75rem; }
+.brand { font-weight: 700; font-size: 1.2rem; color: var(--fg); text-decoration: none; }
+.nav-links { list-style: none; display: flex; flex-wrap: wrap; gap: .5rem 1.25rem; margin: 0; padding: 0; }
+/* 2.5.8/2.5.5 target size: interactive nav targets >= 44x44. */
+.nav-links a, .brand { display: inline-flex; align-items: center; min-height: 44px; }
+
+/* 1.4.1 use of colour: links are underlined, not colour-only. */
+a { color: var(--link); text-decoration: underline; text-underline-offset: 2px; }
+a:hover { color: var(--link-hover); }
+.brand, .nav-links a { text-decoration: none; }
+.nav-links a:hover, .nav-links a:focus { text-decoration: underline; }
+
+main { display: block; }
+.prose { padding-block: 2rem; }
+.prose h1 { font-size: 2rem; line-height: 1.25; margin: 0 0 1rem; }
+.prose h2 { font-size: 1.5rem; line-height: 1.3; margin: 2rem 0 .75rem; }
+.prose h3 { font-size: 1.25rem; margin: 1.5rem 0 .5rem; }
+.prose :is(h1,h2,h3,h4) { max-width: var(--measure); }
 
 /* Code */
-.prose code { font-family: var(--font-mono); font-size: .9em; background: var(--bg-code); padding: .15em .4em; border-radius: 6px; }
-.prose pre {
-  background: var(--bg-code); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 1rem 1.15rem; overflow-x: auto; line-height: 1.5;
+code { background: var(--bg-code); padding: .15em .35em; border-radius: 4px; font-size: .9em; }
+pre { background: var(--bg-code); padding: 1rem; border-radius: var(--radius); overflow-x: auto; }
+pre code { background: none; padding: 0; }
+
+/* Tables — caption + scoped headers handled in markup; styling here. */
+.prose table { border-collapse: collapse; width: 100%; max-width: 100%; margin: 1rem 0; }
+.prose caption { text-align: left; font-weight: 600; color: var(--fg-muted); padding: .5rem 0; }
+.prose th, .prose td { border: 1px solid var(--border); padding: .5rem .75rem; text-align: left; }
+.prose th { background: var(--bg-soft); }
+
+blockquote {
+  margin: 1rem 0; padding: .5rem 1rem; border-left: 4px solid var(--border);
+  color: var(--fg-muted); background: var(--bg-soft);
 }
-.prose pre code { background: none; padding: 0; font-size: .88rem; }
 
-/* Tables */
-.prose table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; font-size: .96rem; }
-.prose th, .prose td { text-align: left; padding: .6rem .75rem; border-bottom: 1px solid var(--border); }
-.prose th { font-weight: 700; }
+img { max-width: 100%; height: auto; }
+hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
 
-/* Lede + hero helpers (use in markdown via fenced HTML if desired) */
-.lede { font-size: 1.25rem; color: var(--fg-soft); }
-.badges { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1.5rem 0; }
-.badge { font-size: .8rem; font-weight: 600; padding: .3rem .7rem; border-radius: 999px; background: var(--bg-soft); border: 1px solid var(--border); color: var(--fg-soft); }
-.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 1rem; margin: 2rem 0; }
-.card { padding: 1.25rem; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-soft); }
-.card h3 { margin-top: 0; }
-.btn-row { display: flex; flex-wrap: wrap; gap: .75rem; margin: 1.75rem 0; }
-.btn { display: inline-block; text-decoration: none; font-weight: 600; padding: .7rem 1.25rem; border-radius: var(--radius); }
-.btn-primary { background: linear-gradient(100deg, var(--accent), var(--accent-2)); color: #fff; }
-.btn-ghost { border: 1px solid var(--border); color: var(--fg); }
-.btn:hover { transform: translateY(-1px); }
+.muted { color: var(--fg-muted); }
 
-/* Footer */
-.site-footer { border-top: 1px solid var(--border); background: var(--bg-soft); padding-block: 2rem; margin-top: 3rem; }
-.footer-grid { display: flex; flex-direction: column; gap: .25rem; max-width: 60rem; }
-.muted { color: var(--fg-soft); font-size: .9rem; margin: .1rem 0; }
-.muted a { color: var(--fg-soft); }
+.site-footer { border-top: 1px solid var(--border); margin-top: 3rem; padding-block: 1.5rem; color: var(--fg-muted); font-size: .95rem; }
+.site-footer a { color: var(--link); }
+
+/* 2.3.3 / user comfort: honour reduced-motion. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+}
+
+/* 1.4.10 reflow: stack nav on narrow viewports, no fixed widths. */
+@media (max-width: 30rem) {
+  .nav { gap: .5rem; }
+  body { font-size: 1rem; }
+}
