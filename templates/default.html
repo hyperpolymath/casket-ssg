@@ -1,29 +1,44 @@
 <!DOCTYPE html>
-<html lang="{{language}}">
+<!--
+  SPDX-License-Identifier: MPL-2.0
+  casket-ssg default theme — semantic, responsive, dark-mode aware.
+  Substituted variables: title, date, brand, content (double-brace syntax).
+-->
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{title}}</title>
-    <meta name="description" content="{{description}}">
-    <link rel="stylesheet" href="/assets/style.css">
-    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{title}}</title>
+  <meta name="generator" content="casket-ssg">
+  <meta name="color-scheme" content="light dark">
+  <link rel="stylesheet" href="/assets/style.css">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 </head>
 <body>
-    <article>
-        <header>
-            <h1>{{title}}</h1>
-            {{#if date}}<time datetime="{{date}}">{{date}}</time>{{/if}}
-        </header>
+  <a class="skip-link" href="#main">Skip to content</a>
 
-        <main>
-            {{content}}
-        </main>
+  <header class="site-header">
+    <nav class="container nav" aria-label="Primary">
+      <a class="brand" href="/">{{brand}}</a>
+      <ul class="nav-links">
+        <li><a href="/">Home</a></li>
+        <li><a href="/spec.html">Spec</a></li>
+        <li><a href="/start.html">Get started</a></li>
+      </ul>
+    </nav>
+  </header>
 
-        <footer>
-            <p>{{#if license}}Licensed under {{license}}{{else}}All rights reserved{{/if}}</p>
-        </footer>
+  <main id="main" class="container">
+    <article class="prose">
+      {{content}}
     </article>
+  </main>
 
-    {{#if assets_js}}<script src="/assets/script.js"></script>{{/if}}
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <p class="muted">Built with <a href="https://github.com/hyperpolymath/casket-ssg">casket-ssg</a> · <time>{{date}}</time></p>
+      <p class="muted">© Jonathan D.A. Jewell · Code <a href="https://www.mozilla.org/MPL/2.0/">MPL-2.0</a>, docs <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC-BY-SA-4.0</a> · <a href="/.well-known/security.txt">security.txt</a></p>
+    </div>
+  </footer>
 </body>
 </html>

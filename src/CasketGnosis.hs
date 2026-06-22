@@ -12,9 +12,10 @@ Casket-SSG with Gnosis integration for 6scm metadata-driven static sites.
 module Main where
 
 import System.Environment (getArgs)
-import System.Directory (listDirectory, createDirectoryIfMissing, doesFileExist)
+import System.Directory (listDirectory, createDirectoryIfMissing, doesFileExist, doesDirectoryExist, copyFile)
 import System.FilePath ((</>), takeBaseName, takeExtension)
-import Control.Monad (forM_)
+import Control.Monad (forM_, when)
+import Data.List (isPrefixOf)
 
 import qualified Gnosis.SixSCM as Gnosis
 import qualified Gnosis.Render as Render
@@ -66,6 +67,9 @@ buildSiteWithGnosis inputDir outputDir = do
     -- Create output directory
     createDirectoryIfMissing True outputDir
 
+    -- Load the page template (CWD templates/default.html, else built-in)
+    template <- loadTemplate
+
     -- Find all markdown files
     files <- listDirectory inputDir
     let mdFiles = filter (\f -> takeExtension f `elem` [".md", ".markdown"]) files
@@ -77,13 +81,18 @@ buildSiteWithGnosis inputDir outputDir = do
             forM_ mdFiles $ \file -> do
                 let inputPath = inputDir </> file
                 let outputPath = outputDir </> takeBaseName file ++ ".html"
-                processFileWithGnosis ctx inputPath outputPath
+                processFileWithGnosis ctx template inputPath outputPath
+
+    -- Copy theme assets (CWD assets/, static/, ... -> outputDir/<dir>/)
+    copyAssets outputDir
+    -- Copy <inputDir>/public/ contents to the site root (security.txt, CNAME, ...)
+    copyPublic inputDir outputDir
 
     putStrLn "Build complete!"
 
 -- | Process a single file with Gnosis rendering
-processFileWithGnosis :: Types.Context -> FilePath -> FilePath -> IO ()
-processFileWithGnosis ctx inputPath outputPath = do
+processFileWithGnosis :: Types.Context -> String -> FilePath -> FilePath -> IO ()
+processFileWithGnosis ctx template inputPath outputPath = do
     putStrLn $ "  " ++ inputPath ++ " -> " ++ outputPath
 
     -- Read template file
@@ -95,8 +104,11 @@ processFileWithGnosis ctx inputPath outputPath = do
     -- Merge frontmatter into context (frontmatter takes precedence)
     let mergedCtx = mergeFrontmatter ctx frontmatter
 
-    -- Get page title from frontmatter or fallback to filename
+    -- Page title (frontmatter, else filename); brand is the site wordmark
+    -- (frontmatter "site", else the page title); date is optional.
     let pageTitle = Map.findWithDefault (takeBaseName inputPath) "title" frontmatter
+    let brand     = Map.findWithDefault pageTitle "site" frontmatter
+    let pageDate  = Map.findWithDefault "" "date" frontmatter
 
     -- Step 1: Process DAX features first ({{#if}}, {{#for}})
     -- This expands loops with literal values and evaluates conditionals
@@ -109,8 +121,8 @@ processFileWithGnosis ctx inputPath outputPath = do
     -- Step 3: Convert Markdown to HTML using Pandoc
     htmlContent <- markdownToHtml withPlaceholders
 
-    -- Step 4: Wrap in simple HTML template
-    let html = wrapInTemplate pageTitle htmlContent
+    -- Step 4: Wrap in the loaded theme template
+    let html = applyTemplate template brand pageTitle pageDate htmlContent
 
     -- Write output
     writeFile outputPath html
@@ -118,47 +130,113 @@ processFileWithGnosis ctx inputPath outputPath = do
 -- | Convert Markdown to HTML using Pandoc
 markdownToHtml :: String -> IO String
 markdownToHtml markdown = do
-    let readerOpts = Pandoc.def
+    -- Enable the standard markdown extension set: raw_html (pass through inline
+    -- HTML for hero/badges/cards), tables (pipe tables), fenced_code, etc.
+    -- Pandoc.def has EMPTY extensions, which would escape raw HTML and ignore tables.
+    let readerOpts = Pandoc.def { Pandoc.readerExtensions = Pandoc.pandocExtensions }
     let writerOpts = Pandoc.def
     result <- Pandoc.runIOorExplode $ do
         doc <- Pandoc.readMarkdown readerOpts (T.pack markdown)
         Pandoc.writeHtml5String writerOpts doc
     return (T.unpack result)
 
--- | Wrap content in simple HTML template
-wrapInTemplate :: String -> String -> String
-wrapInTemplate title content = unlines
+-- | Load the page template from templates/default.html (relative to CWD),
+-- falling back to a minimal built-in template if the file is absent.
+loadTemplate :: IO String
+loadTemplate = do
+    let path = "templates" </> "default.html"
+    exists <- doesFileExist path
+    if exists then readFile path else return builtinTemplate
+
+-- | Minimal fallback template (used only when templates/default.html is missing).
+builtinTemplate :: String
+builtinTemplate = unlines
     [ "<!DOCTYPE html>"
-    , "<html><head>"
+    , "<html lang=\"en\"><head>"
     , "<meta charset=\"UTF-8\">"
-    , "<title>" ++ title ++ "</title>"
-    , "<style>"
-    , "body{font-family:system-ui;max-width:800px;margin:0 auto;padding:2rem}"
-    , "pre{background:#f4f4f4;padding:1rem;overflow-x:auto}"
-    , "code{background:#f4f4f4;padding:0.2em 0.4em;border-radius:3px}"
-    , "</style>"
+    , "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">"
+    , "<title>{{title}}</title>"
+    , "<link rel=\"stylesheet\" href=\"/assets/style.css\">"
     , "</head><body>"
-    , "<article>"
-    , content
-    , "</article>"
+    , "<header class=\"site-header\"><nav class=\"container nav\">"
+    , "<a class=\"brand\" href=\"/\">{{brand}}</a></nav></header>"
+    , "<main id=\"main\" class=\"container\"><article class=\"prose\">"
+    , "{{content}}"
+    , "</article></main>"
+    , "<footer class=\"site-footer\"><div class=\"container\"><p class=\"muted\">"
+    , "<time>{{date}}</time></p></div></footer>"
     , "</body></html>"
     ]
 
--- | Parse frontmatter from content
--- Returns (frontmatter Map, remaining content)
-parseFrontmatter :: String -> (Map.Map String String, String)
-parseFrontmatter content
-    | "---\n" `isPrefixOf` content || "---\r\n" `isPrefixOf` content =
-        let afterFirst = dropWhile (/= '\n') content
-            rest = drop 1 afterFirst  -- Drop first newline
-            (frontmatterText, bodyWithDelim) = break isEndDelimiter (lines rest)
-            body = unlines (dropWhile isEndDelimiter bodyWithDelim)
-            frontmatterMap = parseFrontmatterLines frontmatterText
-        in (frontmatterMap, body)
-    | otherwise = (Map.empty, content)
+-- | Fill the template. {{content}} is substituted last so that arbitrary HTML
+-- in the body cannot be re-processed by later substitutions.
+applyTemplate :: String -> String -> String -> String -> String -> String
+applyTemplate template brand title date content =
+      replaceAll "{{content}}" content
+    . replaceAll "{{date}}"  date
+    . replaceAll "{{title}}" title
+    . replaceAll "{{brand}}" brand
+    $ template
+
+-- | Replace every occurrence of a needle with a replacement.
+replaceAll :: String -> String -> String -> String
+replaceAll "" _ str = str
+replaceAll needle replacement str = go str
   where
-    isEndDelimiter line = line == "---" || line == "---\r"
-    isPrefixOf needle haystack = take (length needle) haystack == needle
+    nLen = length needle
+    go [] = []
+    go s@(c:cs)
+      | needle `isPrefixOf` s = replacement ++ go (drop nLen s)
+      | otherwise             = c : go cs
+
+-- | Copy theme asset directories (relative to CWD) into the output, preserving
+-- the directory name so URLs resolve as /assets/style.css etc.
+copyAssets :: FilePath -> IO ()
+copyAssets outputDir =
+    forM_ ["assets", "static", "css", "js", "images"] $ \d -> do
+        exists <- doesDirectoryExist d
+        when exists $ copyDirectory d (outputDir </> d)
+
+-- | Copy <inputDir>/public/ contents into the OUTPUT ROOT, verbatim, so
+-- root-level web files ship: .well-known/security.txt, CNAME, robots.txt,
+-- favicon.svg, humans.txt, ads.txt, etc.
+copyPublic :: FilePath -> FilePath -> IO ()
+copyPublic inputDir outputDir = do
+    let publicDir = inputDir </> "public"
+    exists <- doesDirectoryExist publicDir
+    when exists $ do
+        entries <- listDirectory publicDir
+        forM_ entries $ \entry -> do
+            let srcPath = publicDir </> entry
+            let dstPath = outputDir </> entry
+            isDir <- doesDirectoryExist srcPath
+            if isDir then copyDirectory srcPath dstPath else copyFile srcPath dstPath
+
+-- | Recursively copy a directory.
+copyDirectory :: FilePath -> FilePath -> IO ()
+copyDirectory src dst = do
+    createDirectoryIfMissing True dst
+    entries <- listDirectory src
+    forM_ entries $ \entry -> do
+        let srcPath = src </> entry
+        let dstPath = dst </> entry
+        isDir <- doesDirectoryExist srcPath
+        if isDir then copyDirectory srcPath dstPath else copyFile srcPath dstPath
+
+-- | Parse frontmatter from content. Tolerates leading blank lines and
+-- single-line HTML comments (e.g. an SPDX header) before the opening `---`
+-- fence. Returns (frontmatter Map, remaining content).
+parseFrontmatter :: String -> (Map.Map String String, String)
+parseFrontmatter content =
+    case dropWhile isSkippable (lines content) of
+        (delim : afterOpen) | strip delim == "---" ->
+            let (fmLines, bodyWithDelim) = break (\l -> strip l == "---") afterOpen
+                body = unlines (drop 1 bodyWithDelim)  -- drop the closing ---
+            in (parseFrontmatterLines fmLines, body)
+        _ -> (Map.empty, content)
+  where
+    isSkippable line = let s = strip line in null s || "<!--" `isPrefixOf` s
+    strip = f . f where f = reverse . dropWhile (`elem` (" \t\r" :: String))
 
 -- | Parse frontmatter lines into Map
 parseFrontmatterLines :: [String] -> Map.Map String String
