@@ -19,66 +19,106 @@ image:https://img.shields.io/badge/Philosophy-Palimpsest-indigo.svg[Palimpsest,l
 
 image:https://img.shields.io/badge/RSR-compliant-gold[RSR Compliant,link=https://github.com/hyperpolymath/rhodium-standard-repositories]
 
-**Pure functional static site generator in Haskell.**
+**A Pandoc-based static site generator in Haskell, with an accessibility-first, metadata-driven rendering layer (Gnosis).**
+
+[NOTE]
+====
+*Status: alpha.* The `build` / `clean` pipeline works and generates real sites.
+Several items below are *planned, not yet implemented* — they are called out
+explicitly so nothing here over-promises. The content engine's direction
+(demote Pandoc; adopt a Djot prose core + `a2ml` typed content) is recorded in
+link:docs/decisions/ADR-0001-content-engine.adoc[ADR-0001].
+====
 
 == Who Is This For?
 
-* **Haskell developers** who want to build sites with tools they know and love
-* **Functional programming enthusiasts** who appreciate compositional design
-* **Teams requiring reliability** where type safety prevents runtime surprises
-* **Anyone frustrated** by dynamic language site builders that fail at deploy time
+* **Haskell developers** who want a small, scriptable content-site generator
+* **Accessibility-conscious authors** who want WCAG-aware output by default
+* **poly-ssg / estate** users who want metadata-driven pages (the Gnosis layer)
 
 == Why casket-ssg?
 
-=== Type Safety That Matters
+=== Accessibility by construction
 
-Your site structure is checked at compile time. Missing templates, broken links, malformed frontmatter - all caught before deployment, not discovered by users.
+The built-in default theme is accessible by default — `<html lang>`, a skip link,
+labelled `header`/`nav`/`main`/`footer` landmarks, viewport meta, and a light/dark
+`color-scheme`. casket also rewrites Pandoc's table headers to add `scope="col"`
+(WCAG 1.3.1), and the Gnosis `FlexiText` type makes *empty alt-text a constructor
+error* — generated badges cannot ship without alt text.
 
-=== Composable Pipelines
+=== Metadata-driven rendering (Gnosis)
 
-Content transformations compose like functions should. Chain markdown processing, templating, and asset handling with confidence that types align.
+An optional layer runs over the Markdown before Pandoc: `(:placeholder)`
+substitution from a metadata context, `{{#if}}` / `{{#for}}` conditionals and loops
+(DAX), and Shields.io badges generated from typed metadata.
 
-=== Lazy Large-Site Builds
+=== Pandoc-based content (today)
 
-Haskell's lazy evaluation means casket-ssg only processes what's needed. Incremental builds are natural, not bolted on.
-
-=== Pandoc Integration
-
-Best-in-class document conversion with full Pandoc support. Markdown, reStructuredText, Org-mode - your content, your format.
+Rich Markdown via Pandoc — anchors, pipe tables, fenced code with syntax
+highlighting, footnotes, task lists, strikethrough, smart punctuation. See
+link:docs/decisions/ADR-0001-content-engine.adoc[ADR-0001] for the planned move to
+a Djot core with Pandoc relegated to a one-shot importer.
 
 == Quick Start
 
+casket-ssg is not yet published to Hackage; build it from source.
+
 [source,bash]
 ----
-# Install
-cabal update
-cabal install casket-ssg
+# Build (Stack or Cabal)
+stack build                 # or: cabal build
 
-# Create a site
-casket-ssg init my-site
-cd my-site
+# Build a site:  build <input-dir> [output-dir]   (default output: _site)
+stack run casket-ssg -- build ./content ./_site
+# ...or, with the built binary on PATH:
+casket-ssg build ./content ./_site
 
-# Build
-casket-ssg build
+# Include drafts (or set CASKET_DRAFTS=1)
+casket-ssg build --drafts ./content
 
-# Preview locally
-casket-ssg serve
+# Emit foo.html instead of foo/index.html
+casket-ssg build --no-clean-urls ./content
+
+# Remove an output directory
+casket-ssg clean ./_site
+
+# Version
+casket-ssg --version
 ----
 
 == Features
 
-* **Compile-time template validation** - broken templates don't build
-* **Strong frontmatter types** - YAML parsing with schema enforcement
-* **Asset pipeline** - CSS/JS processing with hash-based cache busting
-* **Incremental builds** - only rebuild what changed
-* **Live reload** - instant preview during development
-* **RSS/Atom feeds** - generated automatically from content
-* **Sitemap generation** - SEO-ready output
+*Implemented:*
+
+* **Recursive multi-page build** mirroring the source tree into the output
+* **Frontmatter** — `title`, `date`, `description`, `layout`, `draft`, `tags`,
+  `slug`, plus arbitrary keys exposed as `{{key}}` template vars
+* **Rich Markdown via Pandoc** — anchors, pipe tables, fenced/highlighted code,
+  footnotes, task lists, strikethrough, smart punctuation
+* **File templates** in `templates/` with per-page `layout` and partials
+  (`{{> name}}`), plus `{{nav}}`, `{{toc}}`
+* **Site config** (`site.conf`, simple `key = value`) exposed as `{{site.*}}`
+* **Collections** (a directory index sorted by date) and **per-tag pages**
+  (`/tags/<tag>/`)
+* **`sitemap.xml`** and an Atom **`feed.xml`**
+* **Accessible default theme** + automatic `scope="col"` on table headers
+* **Gnosis layer** — `(:placeholder)` rendering, `{{#if}}` / `{{#for}}` (DAX),
+  and `FlexiText` (alt-text-required) badge generation
+* **Clean URLs** (`foo.md` → `foo/index.html`), toggleable with `--no-clean-urls`
+
+*Planned / not yet implemented* (do not assume these work today):
+
+* `init` scaffolding and a `serve` / live-reload dev server
+* Incremental rebuilds (the build is currently a full rebuild)
+* Asset fingerprinting / hash-based cache-busting
+* Schema-enforced frontmatter and compile-time template validation
+* `a2ml`-native typed content and the Djot core (see
+  link:docs/decisions/ADR-0001-content-engine.adoc[ADR-0001])
 
 == Requirements
 
-* GHC 9.0 or later
-* Cabal 3.0 or Stack 2.0
+* GHC 9.4+ (CI builds with GHC 9.4.8) and Cabal 3.0+ or Stack 2.0+
+* Pandoc (pulled in as a library dependency)
 
 == Part of poly-ssg
 
