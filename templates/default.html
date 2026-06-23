@@ -1,29 +1,45 @@
 <!DOCTYPE html>
-<html lang="{{language}}">
+<!--
+  SPDX-License-Identifier: MPL-2.0
+  Canonical accessible default template for casket-ssg / ddraig-ssg.
+  Target: WCAG 2.2 AAA on the engine-owned surface.
+  Variables (double-brace): title, brand, description, date, nav, toc, content.
+  content is substituted LAST so body HTML is never re-processed.
+-->
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{title}}</title>
-    <meta name="description" content="{{description}}">
-    <link rel="stylesheet" href="/assets/style.css">
-    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{title}}</title>
+  <meta name="description" content="{{description}}">
+  <meta name="color-scheme" content="light dark">
+  <meta name="generator" content="casket-ssg">
+  <link rel="stylesheet" href="/assets/style.css">
+  <link rel="stylesheet" href="/assets/highlight.css">
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="alternate" type="application/atom+xml" href="/feed.xml" title="{{brand}}">
 </head>
 <body>
-    <article>
-        <header>
-            <h1>{{title}}</h1>
-            {{#if date}}<time datetime="{{date}}">{{date}}</time>{{/if}}
-        </header>
+  <a class="skip-link" href="#main">Skip to content</a>
 
-        <main>
-            {{content}}
-        </main>
+  <header class="site-header">
+    <nav class="container nav" aria-label="Primary">
+      <a class="brand" href="/">{{brand}}</a>
+      {{nav}}
+    </nav>
+  </header>
 
-        <footer>
-            <p>{{#if license}}Licensed under {{license}}{{else}}All rights reserved{{/if}}</p>
-        </footer>
+  <main id="main" class="container" tabindex="-1">
+    <article class="prose">
+      {{toc}}
+      {{content}}
     </article>
+  </main>
 
-    {{#if assets_js}}<script src="/assets/script.js"></script>{{/if}}
+  <footer class="site-footer">
+    <div class="container">
+      <p class="muted">Built with casket-ssg · <time>{{date}}</time></p>
+    </div>
+  </footer>
 </body>
 </html>
