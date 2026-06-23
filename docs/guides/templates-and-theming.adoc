@@ -1,0 +1,86 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+// SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+= Templates & theming
+:toc: left
+:toclevels: 2
+
+How casket turns a rendered page into HTML: layout resolution, partials, the
+template variables you can use, and the built-in accessible theme. See also
+link:authoring-a-site.adoc[Authoring] and
+link:the-gnosis-layer.adoc[The Gnosis layer].
+
+== Layout resolution
+
+For each page casket picks a layout in this order:
+
+. `templates/<layout>.html` — where `<layout>` is the page's `layout:`
+  front-matter (a bare name gets `.html` appended);
+. `templates/default.html` — the site default;
+. the *built-in accessible template* — if no `templates/` file exists.
+
+So you can ship zero templates and still get a complete, accessible page.
+
+== Partials
+
+Inside any template, include a partial from `templates/partials/<name>.html`:
+
+[source,html]
+----
+{{> header}}
+{{include:footer}}
+----
+
+Both spellings work. Partials may include partials (guarded against cycles). A
+missing partial renders an HTML comment rather than failing the build.
+
+== Template variables
+
+Substituted by `fillTemplate`, in this order (so body HTML is never
+re-processed):
+
+[cols="1,3"]
+|===
+| Variable | Value
+
+| `{{site.KEY}}`   | Any key from `site.conf` (e.g. `{{site.title}}`, `{{site.baseurl}}`)
+| `{{KEY}}`        | Any front-matter key on the page (arbitrary custom keys included)
+| `{{title}}`      | Resolved page title (front-matter `title`, else the file base name)
+| `{{content}}`    | The rendered HTML body (substituted *last*)
+| `{{toc}}`        | Table-of-contents `<nav>` from the page headings
+| `{{nav}}`        | Primary navigation (`site.conf` `nav`, else derived)
+| `{{date}}`       | Page `date` (empty for generated pages)
+| `{{description}}`| Page `description`, else `site.description`
+| `{{brand}}`      | Page `site`/`brand`, else the site title
+|===
+
+The idiom `<time>{{date}}</time>` is rewritten to a valid
+`<time datetime="…">…</time>` (or dropped when there is no date), so empty
+`<time>` elements never ship.
+
+== Assets
+
+These directories, if present in the CWD, are copied into the output:
+`assets/`, `static/`, `css/`, `js/`, `images/`. casket additionally writes the
+syntax-highlighting stylesheet to `/assets/highlight.css` — link it from your
+template:
+
+[source,html]
+----
+<link rel="stylesheet" href="/assets/style.css">
+<link rel="stylesheet" href="/assets/highlight.css">
+----
+
+(For files that must land at the site root, use `public/` — see
+link:authoring-a-site.adoc[Authoring].)
+
+== The built-in accessible theme
+
+When you provide no template, casket's fallback is accessible by construction:
+`<html lang>`, a skip link, labelled `header`/`nav`/`main#main`/`footer`
+landmarks, `<meta viewport>`, and `color-scheme: light dark`. casket also adds
+`scope="col"` to Pandoc's table headers (WCAG 1.3.1).
+
+If you author your *own* template, you own its accessibility — keep the skip
+link, landmarks, `lang`, and a logical heading order. See
+link:accessibility.adoc[the accessibility guide] for the engine-owned vs
+author-owned split.

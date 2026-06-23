@@ -1,0 +1,128 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+// SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+= Authoring a site with casket
+:toc: left
+:toclevels: 2
+
+How to write content, build it, and understand the output. For customising the
+look see link:templates-and-theming.adoc[Templates & theming]; for the metadata
+layer see link:the-gnosis-layer.adoc[The Gnosis layer].
+
+== Source layout
+
+A site is a directory of Markdown plus optional supporting folders:
+
+[source]
+----
+my-site/
+├── content/                 # your pages (passed as the build input dir)
+│   ├── index.md
+│   └── posts/
+│       └── 2026-06-23-hello.md
+├── templates/               # optional: layouts + partials (theming guide)
+│   ├── default.html
+│   └── partials/
+├── assets/                  # optional: copied to /assets in the output
+├── public/                  # optional: copied verbatim to the OUTPUT ROOT
+└── site.conf                # optional: site-wide {{site.*}} values
+----
+
+Only `content/` (the input directory) is required; everything else has sane
+defaults — including a built-in accessible template.
+
+== Writing a page
+
+Each page is Markdown with a `---`-fenced front-matter block:
+
+[source,markdown]
+----
+---
+title: Hello, world
+date: 2026-06-23
+description: A first page built with casket.
+tags: [intro, meta]
+---
+# Hello
+
+Body text in **Markdown**, rendered by Pandoc: tables, footnotes,
+task lists, fenced + highlighted code, smart punctuation.
+----
+
+A leading SPDX HTML comment before the `---` fence is tolerated.
+
+Recognised keys: `title`, `date`, `description`, `tags`, `layout`, `draft`,
+`slug`, and `site`/`brand`. Any *other* key is exposed to templates as
+`{{key}}`, so front-matter doubles as page-scoped template data.
+
+== Building
+
+[source,bash]
+----
+casket-ssg build content _site        # input dir, then optional output dir (default _site)
+casket-ssg build --drafts content     # include `draft: true` pages (or set CASKET_DRAFTS=1)
+casket-ssg build --no-clean-urls content
+casket-ssg clean _site                # remove an output directory
+----
+
+== Output structure
+
+By default casket emits *clean URLs*:
+
+[cols="2,2"]
+|===
+| Source | Output
+
+| `content/index.md`            | `_site/index.html`
+| `content/about.md`            | `_site/about/index.html`  (→ `/about/`)
+| `content/posts/2026-…-hello.md` | `_site/posts/2026-…-hello/index.html`
+|===
+
+* `index.md` always maps to `index.html` in the same directory.
+* `slug: my-slug` front-matter overrides the output basename.
+* `--no-clean-urls` emits `about.html` instead of `about/index.html`.
+
+== Collections
+
+Any source directory with *two or more dated pages* and no `index.md` of its own
+gets a generated listing page (newest first). So `content/posts/` with several
+dated posts yields `/posts/` automatically — no configuration.
+
+== Tags
+
+Pages with `tags:` produce a page per tag at `/tags/<tag>/` (slugified) plus a
+`/tags/` index counting each tag.
+
+== Feeds & discovery
+
+casket writes, from `site.baseurl`:
+
+* `sitemap.xml` — every page URL (including generated collection/tag pages);
+* `feed.xml` — an Atom feed of the 20 most recent *dated* pages.
+
+== Drafts
+
+`draft: true` pages are skipped unless you pass `--drafts` (or set
+`CASKET_DRAFTS=1`). Skipped drafts are reported during the build.
+
+== Verbatim files (`public/`)
+
+Anything under `<input>/public/` is copied to the *output root*, so
+`public/CNAME`, `public/.well-known/security.txt`, `public/robots.txt`, and
+`public/favicon.svg` ship at `/CNAME`, `/.well-known/…`, etc.
+
+== Site configuration (`site.conf`)
+
+A simple `key = value` file (looked up in the CWD, then the input dir), exposed
+to templates as `{{site.*}}`:
+
+[source,ini]
+----
+title       = My Casket Site
+baseurl     = https://example.com
+author      = Jane Doe
+description = Built with casket
+nav         = Home=/,Posts=/posts/,About=/about/
+----
+
+`nav` (optional) drives the primary navigation; without it, casket derives nav
+from your top-level pages.
