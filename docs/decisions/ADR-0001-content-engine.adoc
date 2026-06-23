@@ -1,0 +1,156 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+// SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+= ADR-0001: Content engine — demote Pandoc, Djot prose face, a2ml typed face, on the boj substrate
+:status: Proposed
+:date: 2026-06-23
+:deciders: @hyperpolymath
+:scope: casket-ssg · ddraig-ssg · poly-ssg · boj-server
+
+== Status
+
+*Proposed* — 2026-06-23.
+
+== Context
+
+casket re-exports Pandoc (`pandoc >= 3.0`) as its runtime content engine. Every
+one of Pandoc's worst properties here is independently evidenced, not theoretical:
+
+* *#1 reason people leave Hakyll* (the estate's reference Haskell-SSG comparator):
+  the Pandoc version-bump treadmill, ~1h cold CI builds, OOM-compiling-pandoc.
+* *Live red on `main` right now*: `src/CasketGnosis.hs:50` imports
+  `Text.Pandoc.Options(HighlightMethod)`, which the resolved Pandoc no longer
+  exports — an API-mismatch build break.
+* *Unverifiable*: a 100+-module dependency we can prove nothing about — directly
+  contradicting casket's intended "verified / trustworthy output" positioning.
+* *Blocks the precompiled binary* (the answer to first-run friction): a
+  Pandoc-linked static binary is large and slow to build.
+
+Estate direction is settled around: *a2ml* as the canonical typed content/state
+format ("the way forward"); *Zig* for systems/FFI; *Rust/SPARK*, *Idris2* and
+*Agda* for correctness; and *boj-server* (Zig, Idris2-verified ABI `%default
+total`, credential-isolated) as the estate's primary MCP/capability server with
+on-demand cartridges. casket is already named as a boj capability
+(`standards/.github/workflows/boj-build.yml` → "Casket/ssg-mcp"). casket and
+ddraig currently overlap by each wrapping their own content path.
+
+== Decision
+
+. *Demote Pandoc* from runtime engine to an OPTIONAL, authoring-time importer
+  (`casket import legacy.md -> .dj`). It is no longer a build/runtime dependency
+  of the generator. Pandoc has a bidirectional Djot reader/writer, so the import
+  pass is supported and clean.
+
+. *Djot is the canonical prose syntax* (NOT CommonMark). Djot — by John
+  MacFarlane, author of Pandoc and CommonMark — is purpose-built to be
+  unambiguous and simple to parse, with *native attributes, fenced divs and
+  bracketed spans* (`[text]{.class #id role=… aria-…}`, `::: {.sidebar}`). This
+  turns casket's accessibility from string-rewrite hacks (`addThScope`,
+  raw-HTML passthrough) into first-class syntax, and shrinks the "verifiable
+  parser" target from *impossible* (CommonMark) to *finishable* (Djot).
++
+*Stepping stone (implementation, not format):* adopt Djot now via an existing
+parser — `jotdown` (Rust, zero-dependency, complete) — behind a stable AST/event
+contract, and swap in a verified Zig/Idris2 Djot core *later* behind the same
+contract. Djot the format earns a *permanent* seat; only the implementation is
+transitional.
+
+. *a2ml remains the typed-data / spec face.* Djot replaces CommonMark in the
+  prose-parser slot; it does NOT replace a2ml. a2ml carries typed, validated
+  content ("build fails on a wrong DNS record / missing governance section").
+  Djot = prose + attributes; a2ml = typed structured data. They are
+  complementary faces of one content model; conflating them is the one way this
+  goes wrong.
+
+. *boj-server is the substrate; casket is a cartridge.* casket does NOT build or
+  maintain its own MCP server (the Emanote approach). It registers as a boj
+  capability cartridge and *consumes* from boj: the verified agent/MCP surface,
+  the proven Idris2 ABI (conform to it, do not reinvent it), cartridge
+  distribution/discovery, and credential isolation for forge access. This makes
+  casket's agent surface *formally verified and credential-isolated* — ahead of
+  Emanote's embedded, dev-time, unverified MCP, not behind it.
+
+. *Layered proof boundary.* Haskell carries the cheap in-language invariants
+  (`FlexiText` smart constructor, GADT-tagged accessible HTML, newtype-validated
+  content). Load-bearing proofs (validator totality, a2ml schema validity, the
+  Djot grammar, the accessibility invariant) live in Idris2/Agda. The
+  accessibility invariant is an `echo-types` `Echo f y := Σ (x:A),(f x ≡ y)` —
+  `FlexiText` is its unverified Haskell shadow, and *ddraig owns the native
+  proof*. The same loss-with-residue `Echo` models the Pandoc→Djot import
+  (`import : Markdown -> Σ (d : Djot), (render d ≈ source)`): lossy import with a
+  recoverable witness, rather than features silently discarded.
+
+== Sequencing discipline (load-bearing)
+
+The destination above is correct but the *content rewrite is slow*, and the
+agent-native window is perishable (Emanote already ships MCP). Therefore: *ship
+the cheap differentiators first on today's base, and demote Pandoc underneath
+them once the Djot/Idris2 core is proven — never gate the perishable wins on the
+slow rewrite.* Concretely, the agent surface (register as a boj cartridge) and
+machine-legible output (`llms.txt` + per-page views off `descriptiles/`) land
+early and cheap; Djot adoption rides an existing parser; the verified core lands
+last.
+
+== Consequences
+
+*Positive*
+
+* Kills the treadmill / OOM / API-churn / live build-red; unblocks the
+  precompiled static binary.
+* Removes the one unverifiable dependency — "verified" becomes honest.
+* Agent-native flips from casket's *weakest* leg to its *strongest*: a verified,
+  credential-isolated surface no other SSG (Emanote included) offers.
+* Djot's clean AST + native attributes strengthen the a11y and typed-metadata
+  legs and make Djot→a2ml mapping tractable.
+* Dissolves the casket↔ddraig overlap via a shared Djot/a2ml core, plausibly a
+  shared verified boj capability.
+
+*Negative / risk*
+
+* The content pipeline (a2ml + Djot core + render) is still real work; boj gives
+  the agent/dist/verify rails, not the content engine.
+* Djot is young (2022-) and niche; mitigated by Pandoc import for the Markdown
+  world and by targeting the specs/governance/a11y/agent niche, not mass-market
+  blogs.
+* Verifying even Djot is a project, not free; `jotdown` gets us *working* now,
+  *verified* later.
+* New coupling to boj-server's health (another solo estate repo) — benign and
+  aligned, but real.
+* a2ml prose ergonomics are poor; keep Djot as the prose face so "native" is not
+  bypassed in practice.
+
+== Alternatives considered
+
+* *Keep Pandoc, fix the one-line highlighting break* — symptom only; leaves the
+  treadmill/verifiability/binary problems. The one-line fix is folded onto the
+  transitional importer path, not the engine.
+* *Small CommonMark core* — CommonMark is near-impossible to implement correctly
+  and realistically un-verifiable for Idris2/Agda. Djot exists precisely to fix
+  this.
+* *Prove casket in Haskell* (LiquidHaskell / Dependent Haskell) — swims upstream
+  and duplicates the Idris2/Agda the estate already runs.
+* *Build casket's own MCP server (Emanote-style)* — duplicative and unverified;
+  boj already provides a verified, shared, credential-isolated surface.
+
+== Migration (staged)
+
+. *Now / cheap (today's engine):* README truthing; register casket as a boj
+  cartridge (banks the verified agent surface); emit `llms.txt` + per-page
+  machine views from `descriptiles/`; wire `Gnosis.SixSCM` to read
+  `descriptiles/*.a2ml` (it still reads the old flat `.scm`).
+. *Djot adoption:* parse via `jotdown` behind a stable AST; a2ml-native render
+  path; Djot attributes carry a11y/metadata.
+. *Demote Pandoc:* `casket import` (Pandoc one-shot, Markdown→Djot); drop
+  `pandoc` from the cabal's runtime deps; ship the precompiled static binary.
+. *Verify + share:* replace `jotdown` with a verified Zig/Idris2 Djot core behind
+  the same AST; promote the core to a shared boj capability consumed by casket +
+  ddraig.
+
+== References
+
+* `standards` — `SATELLITES.a2ml`, `immaculate-guide/IMMACULATE-GUIDE.adoc`
+  (BoJ cartridges), `docs/decisions/ADR-002` (cartridge format),
+  `.github/workflows/boj-build.yml` ("Casket/ssg-mcp").
+* Djot — https://github.com/jgm/djot ; `jotdown` (Rust) —
+  https://github.com/hellux/jotdown ; Pandoc Djot support —
+  https://github.com/jgm/djot/discussions/270
+* `hyperpolymath/echo-types` — loss-with-residue `Echo` formalism.
