@@ -1,0 +1,89 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+// SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+= The Gnosis layer
+:toc: left
+:toclevels: 2
+
+Gnosis is casket's optional metadata-driven rendering layer. It runs over the
+Markdown *before* Pandoc, so you can substitute typed values, branch and loop on
+metadata, and emit accessible badges — all from a structured data context. See
+link:authoring-a-site.adoc[Authoring] for the basics.
+
+== The context
+
+Gnosis renders against a *context* — a map of keys to `FlexiText` values, where
+each value pairs a *visual* with mandatory *alt-text*. The context is built from:
+
+* the page's front-matter (highest priority), merged over
+* the repository's descriptive metadata (the six `.a2ml` files under
+  `.machine_readable/descriptiles/`).
+
+[NOTE]
+====
+*Current state:* the loader (`Gnosis.SixSCM`) still reads the older flat
+`.machine_readable/*.scm` layout, so today the context is driven mainly by
+front-matter. Wiring it to `descriptiles/*.a2ml` is the first migration step in
+link:../decisions/ADR-0001-content-engine.adoc[ADR-0001].
+====
+
+== Placeholders — `(:key)`
+
+`(:key)` is replaced by the value of `key` in the context, rendered as an
+*accessible Shields.io badge* (the value as the badge, `key` as the label, with
+the FlexiText alt-text). A missing key renders `(:MISSING:key)` so gaps are
+visible, never silent.
+
+[source,markdown]
+----
+Project phase: (:phase)
+Health: (:health-score)
+----
+
+=== Filters
+
+Chain filters with `|`:
+
+[source,markdown]
+----
+Downloads: (:downloads | thousands-separator)
+Name: (:name | uppercase)
+----
+
+Built-in filters: `thousands-separator`, `relativeTime`, `uppercase`,
+`lowercase`, `capitalize`, `round`. An unknown filter passes the value through
+unchanged.
+
+== Conditionals & loops (DAX)
+
+DAX adds block logic, evaluated before placeholders.
+
+[source,markdown]
+----
+{{#if phase == production}}
+**Stable.** Safe to depend on.
+{{/if}}
+
+{{#if status != archived}}
+Actively maintained.
+{{/if}}
+----
+
+Loops iterate a comma-separated list value; inside the body, `(:var)` refers to
+the current item:
+
+[source,markdown]
+----
+{{#for tag in tags}}
+- (:tag)
+{{/for}}
+----
+
+Supported comparisons are `==` and `!=`; an unparseable condition renders
+nothing.
+
+== Why FlexiText
+
+Every Gnosis value is a `FlexiText` — a visual paired with alt-text whose smart
+constructor *rejects empty alt-text* (a `Left`, the "Tri-Guard" rule). That is
+why placeholder badges always carry an accessible description: it is impossible
+to construct one that does not. See link:accessibility.adoc[Accessibility].

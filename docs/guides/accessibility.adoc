@@ -1,0 +1,66 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+// SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+= Accessibility
+:toc: left
+:toclevels: 2
+
+casket treats accessibility as a property of the *engine*, not a checklist for
+the author. This guide separates what casket guarantees from what remains your
+responsibility.
+
+== Engine-owned (casket guarantees)
+
+When you use the built-in template and the default pipeline, casket emits:
+
+[cols="2,3"]
+|===
+| What | WCAG relevance
+
+| `<html lang="…">`, `<meta viewport>`, `color-scheme: light dark`
+| 3.1.1 Language of Page; 1.4.10 Reflow; respects OS light/dark
+
+| A skip link (`Skip to content`) and labelled landmarks
+  (`header` / `nav[aria-label]` / `main#main` / `footer`)
+| 2.4.1 Bypass Blocks; 1.3.1 Info & Relationships
+
+| `scope="col"` added to Pandoc table headers automatically
+| 1.3.1 Info & Relationships (screen-reader table navigation)
+
+| Valid `<time datetime="…">` (empty `<time>` is dropped)
+| 1.3.1; avoids invalid markup
+
+| Mandatory alt-text on every generated badge (`FlexiText`)
+| 1.1.1 Non-text Content — *enforced at construction*, cannot be omitted
+|===
+
+The `FlexiText` guarantee is structural: the smart constructor rejects empty
+alt-text, so a badge without a text alternative cannot be built. See
+link:the-gnosis-layer.adoc[The Gnosis layer].
+
+== Author-owned (your responsibility)
+
+casket cannot guarantee accessibility for content and templates you author:
+
+* *Your images* — provide real alt text (`![meaningful description](img.png)`).
+* *Custom templates* — if you replace the built-in template, keep the `lang`
+  attribute, skip link, landmarks, and a logical, unskipped heading order.
+* *Custom CSS* — maintain colour contrast (aim ≥ 4.5:1 body text), visible
+  `:focus-visible`, ≥ 44px touch targets, and honour `prefers-reduced-motion`.
+* *Link text* — write meaningful link text, not "click here".
+* *Headings* — one `<h1>` per page; don't skip levels.
+
+== Verifying
+
+The engine-owned guarantees ship by default; for the author-owned criteria, run
+an automated checker (axe, pa11y, or Lighthouse) over the built `_site/` in CI.
+The sibling project https://github.com/hyperpolymath/ddraig-ssg[ddraig] maintains
+an `ACCESSIBILITY-CHECKLIST` enumerating engine-owned vs author-owned success
+criteria; casket shares that split.
+
+== Direction
+
+The accessibility invariant is being lifted from a constructor guarantee toward
+a *proof*: the loss-with-residue `echo-types` `Echo` formalism, where rendered
+output retains a witness of its accessible source. `FlexiText` is the current
+unverified shadow of that; the dependently-typed sibling ddraig owns the native
+proof. See link:../decisions/ADR-0001-content-engine.adoc[ADR-0001].
