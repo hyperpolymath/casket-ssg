@@ -8,15 +8,6 @@
 # Comment lines (`#`) and blank lines are tolerated because they never
 # match the `rule:path` shape under -xF.
 #
-# ─── Example/documentation .res fixtures ────────────────────────────
-#
-# examples/SafeDOMExample.res is a DOCUMENTATION FIXTURE showing how to
-# consume the SafeDOM library from ReScript. The estate banned-language
-# rule correctly flags `.res` files everywhere — exempt this specific
-# documentation example so the governance gate passes on every PR.
-#
-# Going forward: this example should eventually be ported to
-# AffineScript (per the 2026-05-25 estate policy refresh —
-# `feedback_estate_lang_policy_2026_05_25`). When ported, drop this
-# line.
-cicd_rules/banned_language_file:examples/SafeDOMExample.res
+# (No active exemptions. The former
+# `cicd_rules/banned_language_file:examples/SafeDOMExample.res` exemption
+# was removed after that .res fixture was deleted in #38.)
