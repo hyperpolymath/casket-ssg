@@ -1,0 +1,61 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+// Copyright (c) 2025-2026 Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+= Accessibility Conformance — casket-ssg / ddraig-ssg
+:toc: macro
+
+This SSG aims to be *WCAG 2.2 Level AAA-capable*: the engine and its default
+theme provide everything an engine can own toward AAA, but *AAA conformance is
+a property of each published page*, and several success criteria are
+inherently the author's responsibility. There is no "WCAG 2.3"; 2.2 is the
+current W3C Recommendation and 3.0 is a draft.
+
+toc::[]
+
+== Engine-owned (handled by the engine + default theme)
+
+[cols="1,3",options="header"]
+|===
+| WCAG 2.2 SC | How it is met
+
+| 1.3.1 Info & Relationships (A) | Semantic HTML5 landmarks (`header`/`nav`/`main`/`footer`), heading hierarchy, lists, `<th scope>` + `<caption>` on generated tables.
+| 1.4.1 Use of Colour (A) | Links are underlined, not colour-only.
+| 1.4.3 Contrast (AA) / 1.4.6 Contrast Enhanced (AAA) | Default palette is contrast-verified ≥ 7:1 for all text (light & dark): body 17.1:1, muted 10.7:1, links 9.9:1.
+| 1.4.10 Reflow (AA) | Fluid layout, `rem` units, `overflow-wrap`, no fixed widths — no horizontal scroll at 320px.
+| 1.4.11 Non-text Contrast (AA) | UI borders / focus ring ≥ 3:1.
+| 1.4.12 Text Spacing (AA) | `line-height` 1.6, paragraph spacing, no clipping on user overrides.
+| 2.1.1 Keyboard (A) | No scripted traps; native focusable elements only.
+| 2.4.1 Bypass Blocks (A) | "Skip to content" link in every layout; `main#main`.
+| 2.4.7 Focus Visible (AA) / 2.4.11 Focus Not Obscured (AA) / 2.4.13 Focus Appearance (AAA) | Thick (3px) offset `:focus-visible` outline, ≥ 3:1, never removed.
+| 2.5.5 Target Size (AAA) / 2.5.8 (AA) | Interactive nav targets ≥ 44×44 px.
+| 2.3.3 Animation from Interactions (AAA) | `prefers-reduced-motion` honoured.
+| 3.1.1 Language of Page (A) | `<html lang="en">`.
+| 4.1.2 Name, Role, Value (A) | Native elements + `aria-label` on nav landmark.
+|===
+
+== Author-owned (you MUST satisfy these per page/site — no engine can guarantee them)
+
+[cols="1,3",options="header"]
+|===
+| WCAG 2.2 SC | What you must do
+
+| 1.1.1 Non-text Content (A) | Provide meaningful `alt` for every informative image (`![meaningful description](…)`); use `alt=""` only for decorative images.
+| 1.2.x Time-based Media (A–AAA) | Provide captions, transcripts, audio description, and (AAA 1.2.6) sign-language for any audio/video you embed.
+| 1.4.5 / 1.4.9 Images of Text (AA/AAA) | Do not put text in images; use real text. AAA (1.4.9) allows no exceptions except logotypes.
+| 2.4.9 Link Purpose, Link Only (AAA) | Write link text that makes sense out of context — avoid "click here"/"read more".
+| 2.4.10 Section Headings (AAA) | Organise content with descriptive headings in logical order (don't skip levels).
+| 3.1.2 Language of Parts (AA) | Mark inline foreign-language phrases with `lang` (raw-HTML `<span lang="…">`).
+| 3.1.3 Unusual Words / 3.1.4 Abbreviations / 3.1.6 Pronunciation (AAA) | Provide definitions/glossary; expand abbreviations on first use.
+| 3.1.5 Reading Level (AAA) | Keep prose at lower-secondary reading level, or supply a simpler alternative.
+| 2.3.1 Three Flashes (A) / 2.3.2 (AAA) | Do not embed flashing content.
+| Heading order / colour in custom CSS | If you override the theme palette, re-verify ≥ 7:1; if you author custom HTML, keep one `<h1>` and a logical heading order.
+|===
+
+== Verifying a build
+
+* Markup validity: `java -jar vnu.jar --also-check-css <out>/**/*.html`
+* Contrast: recompute any custom colours to ≥ 7:1 (AAA) before shipping.
+* Manual: keyboard-only walkthrough (Tab order, visible focus, skip link), and a screen-reader pass on key pages.
+
+Automated DOM checkers (axe, pa11y) are Node tools and are not used here
+(npm/Node is banned estate-wide); the W3C Nu validator (`vnu.jar`, Java) covers
+markup, and the remaining AAA criteria are reviewed manually against this list.
