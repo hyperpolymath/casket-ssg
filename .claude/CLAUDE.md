@@ -4,14 +4,15 @@ Copyright (c) Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
 -->
 ## Machine-Readable Artefacts
 
-The following files in `.machine_readable/` contain structured project metadata:
+The following files in `.machine_readable/descriptiles/` contain structured
+project metadata (A2ML — TOML-like format; formerly the `6a2/` set of `.scm` files):
 
-- `STATE.scm` - Current project state and progress
-- `META.scm` - Architecture decisions and development practices
-- `ECOSYSTEM.scm` - Position in the ecosystem and related projects
-- `AGENTIC.scm` - AI agent interaction patterns
-- `NEUROSYM.scm` - Neurosymbolic integration config
-- `PLAYBOOK.scm` - Operational runbook
+- `STATE.a2ml` - Current project state and progress
+- `META.a2ml` - Architecture decisions and development practices
+- `ECOSYSTEM.a2ml` - Position in the ecosystem and related projects
+- `AGENTIC.a2ml` - AI agent interaction patterns
+- `NEUROSYM.a2ml` - Neurosymbolic integration config
+- `PLAYBOOK.a2ml` - Operational runbook
 
 ---
 
