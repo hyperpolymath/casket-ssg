@@ -1,0 +1,146 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+// SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+= EXPLAINME — casket architecture & invariants
+:toc: left
+:toclevels: 3
+
+A developer deep-dive: how casket is built, what the Gnosis layer is, the
+invariants it upholds, the known gaps, and the direction of travel. For the
+user-facing overview see link:README.adoc[README]; for the engine decision see
+link:docs/decisions/ADR-0001-content-engine.adoc[ADR-0001].
+
+== One paragraph
+
+casket is a Pandoc-based static site generator with a bespoke *Gnosis* layer.
+The built executable (`CasketGnosis.hs`) discovers Markdown, runs each file
+through Gnosis (metadata-driven substitution) and then Pandoc (Markdown → HTML),
+fills a file-based template, and writes an accessible HTML tree plus collections,
+tag pages, a sitemap and an Atom feed. Accessibility is enforced structurally,
+not linted after the fact.
+
+== Build pipeline
+
+`buildSiteWithGnosis` (in `src/CasketGnosis.hs`) orchestrates one build:
+
+[source]
+----
+loadAll6SCM .machine_readable        ; metadata context  (Gnosis.SixSCM)
+loadSiteConfig (site.conf)           ; {{site.*}} vars
+findMarkdown <input>                 ; recursive .md/.markdown discovery
+  └─ per page: renderPage
+       parseFrontmatter              ; ----fenced key: value (tolerates SPDX comment)
+       mergeFrontmatter ctx fm       ; front-matter overrides 6scm context
+       DAX.processTemplate           ; {{#if}} / {{#for}} over the Markdown body
+       Render.renderWithBadges       ; (:placeholder) → value / Shields badge
+       markdownToHtml (Pandoc)       ; body + TOC, syntax highlighting
+       addThScope                    ; inject scope="col" on <th>  (WCAG 1.3.1)
+filter drafts (unless --drafts)
+buildNav                             ; from site.conf `nav` or derived
+per page: writePage → loadLayout → fillTemplate → write
+writeCollections                     ; date-sorted index per directory (≥2 dated)
+writeTagPages                        ; /tags/<tag>/ + /tags/ index
+writeSitemap ; writeFeed             ; from site.baseurl
+copyAssets ; writeHighlightCss ; copyPublic
+----
+
+Template substitution order in `fillTemplate` matters: `{{site.*}}` →
+front-matter keys → standard vars (`{{nav}}`, `{{toc}}`, `{{title}}`, …) →
+`{{content}}` *last*, so rendered body HTML is never re-processed.
+
+== Module map (`src/`)
+
+[cols="1,3"]
+|===
+| Module | Responsibility
+
+| `CasketGnosis.hs` (`Main`)
+| Build orchestration, CLI (`build` / `clean` / `--version`), frontmatter,
+  templates/partials, collections, tags, sitemap, Atom feed, assets.
+
+| `Gnosis.Types`
+| `FlexiText` (visual + alt-text) and `Context`. Smart constructor `mkFlexiText`
+  returns `Left` on empty alt-text — the Tri-Guard accessibility primitive.
+
+| `Gnosis.Render`
+| `(:placeholder)` rendering with optional `| filter` chains; `PlainText` or
+  `ShieldsIOBadge` mode. `renderWithBadges` is used in the build.
+
+| `Gnosis.DAX`
+| Data-eXpression layer: `{{#if cond}}`, `{{#for x in list}}`, and value filters
+  (`thousands-separator`, `uppercase`, …).
+
+| `Gnosis.SixSCM`
+| Loads the six descriptive metadata files into a `Context`.
+  *Known gap:* currently reads `.machine_readable/STATE.scm` … (the old flat
+  `.scm` layout) — it does **not** yet read `.machine_readable/descriptiles/*.a2ml`.
+
+| `Gnosis.SExp`
+| Recursive-descent S-expression parser (for the legacy `.scm` metadata).
+
+| `Gnosis.Paxos`
+| Timestamp-ballot last-write-wins merge for concurrent `STATE` updates by
+  automation. Aspirational; not on the render path.
+
+| `Casket.hs`
+| *Legacy.* A standalone hand-rolled "HakyllLite" (own Markdown parser, no
+  Pandoc). **Not** in the cabal's build — `CasketGnosis.hs` is the real binary.
+  Slated for removal/relocation to `examples/`.
+|===
+
+== Invariants
+
+* *Alt-text is non-optional.* `FlexiText` pairs a visual with mandatory alt-text;
+  `mkFlexiText "" ""`-style empty alt-text is a `Left`, not output. Generated
+  badges cannot ship without alt text.
+* *Tables are screen-reader navigable.* `addThScope` adds `scope="col"` to every
+  `<th>` Pandoc emits that lacks one (never double-adds).
+* *The default page is accessible.* The built-in fallback template ships
+  `<html lang>`, a skip link, labelled `header`/`nav`/`main#main`/`footer`
+  landmarks, viewport meta, and `color-scheme: light dark`.
+* *Body HTML is substituted last* so it is never re-templated.
+* *Drafts are excluded* unless `--drafts` / `CASKET_DRAFTS=1`.
+
+== Content & metadata model
+
+* *Front-matter:* `---`-fenced `key: value`, tolerant of a leading SPDX HTML
+  comment. Arbitrary keys become `{{key}}` template vars.
+* *Site config:* `site.conf`, simple `key = value`, exposed as `{{site.*}}`.
+* *Gnosis context (descriptiles):* the six `.a2ml` files under
+  `.machine_readable/descriptiles/` are intended to feed `(:placeholder)` /
+  DAX. Wiring `Gnosis.SixSCM` to read `descriptiles/*.a2ml` (an `a2ml` reader)
+  is the first migration step (see below).
+
+== Known gaps (current state)
+
+* *Build is red on `main`* — `CasketGnosis.hs` imports
+  `Text.Pandoc.Options(HighlightMethod)`, which the resolved Pandoc no longer
+  exports. Retired by the ADR-0001 engine change, not patched in place.
+* *Gnosis metadata is dormant against this repo* — `SixSCM` reads `.scm`, but the
+  metadata now lives at `descriptiles/*.a2ml`; until wired, `(:placeholder)`
+  resolves only against front-matter.
+* *Two codebases* — `Casket.hs` (legacy) vs `CasketGnosis.hs` (built); only the
+  latter ships.
+* *No incremental build, no dev server* — full rebuild each run.
+
+== Direction (ADR-0001)
+
+* *Demote Pandoc* to a one-shot authoring-time importer (Markdown → Djot).
+* *Djot* as the canonical prose syntax (clean, attribute-bearing, far easier to
+  parse — and to verify — than CommonMark): `jotdown` (Rust) now, a verified
+  Zig/Idris2 Djot core later behind a stable AST.
+* *a2ml* as the typed-data face (Djot replaces CommonMark, not a2ml).
+* *boj cartridge* — consume boj's verified MCP/ABI/distribution/credential
+  isolation instead of building an MCP server.
+* *Layered proofs* — Haskell carries cheap invariants; Idris2/Agda carry the
+  load-bearing ones. The accessibility invariant is an `echo-types`
+  `Echo f y := Σ (x:A),(f x ≡ y)` — `FlexiText` is its unverified shadow, and
+  ddraig owns the native proof.
+
+== Extending casket
+
+* *Templates:* drop `templates/<layout>.html`; select per page via `layout:`
+  front-matter; partials via `{{> name}}` from `templates/partials/`.
+* *Theme:* override `assets/style.css`; highlight CSS is emitted to
+  `/assets/highlight.css`.
+* *Verbatim files:* anything under `<input>/public/` is copied to the output root
+  (`CNAME`, `.well-known/`, `robots.txt`, …).
