@@ -70,3 +70,24 @@ not block.
 - tolerance: 0 files missing SPDX-License-Identifier
 - corrective: Add SPDX headers to files that need them
 - severity: advisory
+
+## Internationalisation (i18n) Drift
+
+### lol-linkage
+- description: Any i18n work must reference/call LOL (standards/lol) as a service
+- tolerance: i18n features resolve strings via the LOL liblol C ABI; corpus never embedded
+- corrective: Replace embedded locale data with LOL lookups; link liblol (see ADR-0002)
+- severity: advisory
+- notes: LOL is corpus data (1500+ languages), called as a service — never embedded. See docs/decisions/ADR-0002-i18n-via-lol.adoc
+
+### no-embedded-locales
+- description: No embedded locale/corpus data files in the repo
+- tolerance: 0 embedded locale data files (e.g. locales/*.txt)
+- corrective: Remove embedded locale stubs; resolve strings through LOL
+- severity: advisory
+
+### i18n-invariants
+- description: i18n output honours externalizable strings, locale-aware dates, RTL, UTF-8
+- tolerance: User-facing strings externalizable; dates locale-aware; RTL + UTF-8 supported
+- corrective: Externalise hard-coded strings; route locale/plural/date through LOL
+- severity: advisory

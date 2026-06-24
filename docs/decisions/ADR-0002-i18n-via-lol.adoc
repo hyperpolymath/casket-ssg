@@ -1,0 +1,95 @@
+// SPDX-License-Identifier: CC-BY-SA-4.0
+// SPDX-FileCopyrightText: 2026 Jonathan D.A. Jewell <j.d.a.jewell@open.ac.uk>
+= ADR-0002: Internationalisation — consume LOL via the liblol C ABI
+:status: Proposed
+:date: 2026-06-24
+:deciders: @hyperpolymath
+:scope: casket-ssg · standards/lol · poly-ssg
+
+== Status
+
+Proposed — 2026-06-24.
+
+== Context
+
+* Estate rule (claude-memory `lol-i18n-linkage`): *any i18n work MUST reference/
+  link LOL*, and LOL is **called as a service, never embedded** — it is corpus
+  data (1500+ languages), not a library; embedding bloats repos and forks the
+  single source of truth.
+* The i18n stack: runtime = `polyglot-i18n`; corpus = `standards/lol`;
+  enforcement = the ADJUST contractile.
+* LOL exposes the estate ABI/FFI/API triple: Idris2 ABI (formal proofs) →
+  generated C header (`lol.h`) → Zig FFI (`liblol`) → Zig gateway
+  (REST/gRPC/GraphQL, ports 7800–7802). (The memory note's "V-lang API" line is
+  stale — V-lang→Zig completed 2026-05-28; the gateway is now Zig.)
+* casket currently ships four `locales/*.txt` stubs — exactly the embedding the
+  rule forbids — and they are unused/dormant.
+* casket already has an `ffi/zig/` layer and the Idris2-ABI/Zig-FFI seam
+  (`ABI-FFI-README`), and is moving to typed a2ml/Djot content (ADR-0001).
+
+== Decision
+
+. casket **consumes** LOL; it does not implement i18n. The four `locales/*.txt`
+  stubs are removed.
+. Consume LOL **in-process via the C ABI** (`lol.h` / `liblol`), *not* the HTTP
+  gateway: casket renders at build time and a live-gateway dependency is
+  non-hermetic. The corpus stays in `LOL_DATA_DIR` (external) — only the library
+  is linked, so "call as a service, never embed" holds.
+. Bind through casket's existing `ffi/zig` + Idris2-ABI seam — same posture as
+  the boj cartridge and the Djot core. A new `Gnosis.I18n` declares
+  `foreign import ccall` bindings for `lol_init`, `lol_translate`,
+  `lol_translate_plural`, `lol_resolve_locale`, `lol_translation_text`,
+  `lol_free_*`, `lol_last_error`, wrapped in a safe `translate` /
+  `translatePlural` / `resolveLang` surface.
+. Render-time flow (post-ADR-0001 typed content): `lol_init(LOL_DATA_DIR)` once →
+  per localizable field `lol_translate(handle, locale, key)` (or `_plural` for
+  counts) → `lol_resolve_locale` feeds a correct `<html lang/dir>`. A missing key
+  (`LOL_KEY_NOT_FOUND`) surfaces loudly, matching casket's `(:MISSING:key)` ethos.
+. Per the estate rule, casket's ADJUST contractile carries an i18n section
+  linking LOL and its invariants (externalizable strings, locale-aware dates,
+  RTL, UTF-8).
+
+== Consequences
+
+*Positive*
+
+* Inherits LOL's *Idris2-proven* guarantees (BCP-47 validity, translation-key
+  validity, store-lookup guarantee, fallback-chain contract, plural bounds; no
+  `believe_me`) — localization is proof-backed, matching casket's verified-output
+  thesis.
+* Correct per-locale `lang`/`dir`/RTL = WCAG 3.1.1/3.1.2 by construction —
+  i18n + a11y = inclusive output.
+* Single source of truth for linguistic data; casket stays lean (no corpus
+  embedded); one more adapter on the existing FFI seam.
+
+*Negative / risk*
+
+* Build inputs grow: `liblol.so` (Guix/Nix) + a pinned corpus (`LOL_DATA_DIR`).
+  Mitigated — Zig cross-compiles cleanly (unlike Pandoc), fitting the
+  static-binary goal.
+* Needs the typed a2ml/Djot model (ADR-0001) to hang locale-keys off; building
+  the binding earlier means retrofitting → **post-core**.
+* LOL itself is on the old estate standard (`6a2/`, ReScript) — orthogonal; its
+  ABI/FFI is sound and stable.
+
+== Alternatives considered
+
+* *HTTP gateway (REST/gRPC/GraphQL)* — right for runtime apps, wrong for a
+  build-time SSG (non-hermetic). Rejected for casket.
+* *Hand-roll casket-local i18n / keep the locale stubs* — violates "call LOL,
+  never embed" and duplicates the source of truth. Rejected.
+* *Use `polyglot-i18n` directly* — that is the runtime framework layer; LOL is
+  the corpus it feeds on. casket needs corpus lookups at build time → the LOL
+  C ABI is the right level.
+
+== Sequencing
+
+* *Now (this PR):* ADR + ADJUST contractile i18n stanza; flag the stubs for removal.
+* *Post-core (tracked issue):* `Gnosis.I18n` liblol binding + render-time calls;
+  remove the stubs; `liblol`/corpus build packaging.
+
+== References
+
+* claude-memory `lol-i18n-linkage.md` — the linkage rule.
+* `standards/lol/generated/abi/lol.h`, `standards/lol/ABI-FFI-README.md` — the V-triple.
+* link:ADR-0001-content-engine.adoc[ADR-0001] — the typed content model this hangs off.
