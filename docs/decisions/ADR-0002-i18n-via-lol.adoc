@@ -64,12 +64,12 @@ Proposed — 2026-06-24.
 
 *Negative / risk*
 
-* Build inputs grow: `liblol.so` (Guix/Nix) + a pinned corpus (`LOL_DATA_DIR`).
+* Build inputs grow: `liblol.so` (Guix/Guix) + a pinned corpus (`LOL_DATA_DIR`).
   Mitigated — Zig cross-compiles cleanly (unlike Pandoc), fitting the
   static-binary goal.
 * Needs the typed a2ml/Djot model (ADR-0001) to hang locale-keys off; building
   the binding earlier means retrofitting → **post-core**.
-* LOL itself is on the old estate standard (`6a2/`, ReScript) — orthogonal; its
+* LOL itself is on the old estate standard (`6a2/`, AffineScript) — orthogonal; its
   ABI/FFI is sound and stable.
 
 == Alternatives considered
