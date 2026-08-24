@@ -1,0 +1,19 @@
+== About casket-ssg
+
+casket-ssg is part of the poly-ssg ecosystem, demonstrating static site
+generation in Haskell.
+
+=== Why Haskell?
+
+Haskell’s strong type system catches errors at compile time, ensuring
+reliable transformations from markdown to HTML. Its lazy evaluation and
+powerful abstractions like monads make handling file I/O elegant.
+Libraries like Pandoc (written in Haskell) demonstrate the language’s
+natural fit for document processing.
+
+=== Learn More
+
+* https://github.com/hyperpolymath/poly-ssg-mcp[poly-ssg-mcp] - The
+unified MCP adapter
+* https://github.com/hyperpolymath/poly-ssg[poly-ssg] - Polyglot SSG
+framework

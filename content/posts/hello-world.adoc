@@ -1,0 +1,17 @@
+== Hello, World!
+
+This is the first post on my casket-ssg site.
+
+=== Code Example
+
+Here’s a simple example in Haskell:
+
+[source,haskell]
+----
+module Main where
+
+main :: IO ()
+main = putStrLn "Hello, World!"
+----
+
+Happy building!
