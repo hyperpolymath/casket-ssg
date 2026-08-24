@@ -1,5 +1,0 @@
-# German translations
-read_more: Weiterlesen
-published: Veröffentlicht
-tags: Schlagwörter
-home: Startseite
