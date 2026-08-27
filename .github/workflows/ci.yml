@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: MPL-2.0
+# This workflow is managed by gh actions-lock.
 name: Haskell CI
 permissions: read-all
 on:
@@ -11,19 +12,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+      - uses: actions/checkout@v7.0.1
       - name: Set up GHC
         # SHA pinned to v2.7.10 (current at 2026-05-25). The previous pin
         # `dd344bc1cec854a9b2f7029b98379ce6c1accc98` did not exist on the
         # upstream repo — GitHub Actions failed to resolve it and every
         # CI run errored before any GHC step ran. This SHA is the same
         # one used elsewhere in this repo (sbom.yml, casket-ci.yml).
-        uses: haskell-actions/setup@6037f33647c3f17758a2356c80fc4a53d7e0685d # v2.12.0
+        uses: haskell-actions/setup@v2.12.0
         with:
           ghc-version: '9.4'
           cabal-version: '3.10'
       - name: Cache Cabal
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v4
+        uses: actions/cache@v6.1.0
         with:
           path: |
             ~/.cabal/packages
@@ -38,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+      - uses: actions/checkout@v7.0.1
       - name: Verify Haskell-only in src/
         run: |
           echo "Checking for forbidden languages in src/..."
