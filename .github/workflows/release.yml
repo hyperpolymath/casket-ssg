@@ -125,7 +125,7 @@ jobs:
         run: |
           find artifacts -type f
       - name: Create Release
-        uses: softprops/action-gh-release@v3.0.2
+        uses: softprops/action-gh-release@v3.0.3
         with:
           files: |
             artifacts/*.tar.gz
