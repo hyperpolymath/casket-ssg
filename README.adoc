@@ -71,10 +71,17 @@ No Node, no npm, no required config file.
 == Installation
 
 Tagged releases provide a checksummed, provenance-attested core binary for
-64-bit Linux. The core build has no LoL native-library requirement. Download
+Linux x86-64. The core build has no LoL native-library requirement. Download
 the archive and its adjacent `+.sha256+` file from the
 https://github.com/hyperpolymath/casket-ssg/releases[GitHub Releases page],
-then verify the archive before extracting it.
+then verify both its checksum and GitHub build provenance before extracting it:
+
+[source,bash]
+----
+sha256sum -c casket-ssg-1.0.0-x86_64-linux.tar.gz.sha256
+gh attestation verify casket-ssg-1.0.0-x86_64-linux.tar.gz \
+  --repo hyperpolymath/casket-ssg
+----
 
 casket is not yet on Hackage. To build from source (GHC 9.4+, Cabal 3 or
 Stack 2):

@@ -128,7 +128,8 @@ jobs:
             echo "lol-i18n=disabled"
             ghc --version
             cabal --version | head -n 1
-            ldd "${package_dir}/casket-ssg"
+            readelf -d "${package_dir}/casket-ssg" \
+              | awk '$2 == "(NEEDED)" { gsub(/[][]/, "", $5); print "needed=" $5 }'
           } > "${package_dir}/BUILD-METADATA.txt"
 
           source_date_epoch="$(git show -s --format=%ct HEAD)"
