@@ -40,8 +40,6 @@ workflows:
         - 'actions/checkout@v7.0.1'
         - 'actions/download-artifact@v8.0.1'
         - 'actions/upload-artifact@v7.0.1'
-        - 'haskell-actions/setup@v2.12.0'
-        - 'softprops/action-gh-release@v3.0.2'
     '.github/workflows/sbom.yml':
         - 'actions/checkout@v7.0.1'
         - 'actions/upload-artifact@v7.0.1'

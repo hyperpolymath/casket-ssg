@@ -70,7 +70,20 @@ No Node, no npm, no required config file.
 
 == Installation
 
-casket is not yet on Hackage — build from source (GHC 9.4+, Cabal 3 or
+Tagged releases provide a checksummed, provenance-attested core binary for
+Linux x86-64. The core build has no LoL native-library requirement. Download
+the archive and its adjacent `+.sha256+` file from the
+https://github.com/hyperpolymath/casket-ssg/releases[GitHub Releases page],
+then verify both its checksum and GitHub build provenance before extracting it:
+
+[source,bash]
+----
+sha256sum -c casket-ssg-1.0.0-x86_64-linux.tar.gz.sha256
+gh attestation verify casket-ssg-1.0.0-x86_64-linux.tar.gz \
+  --repo hyperpolymath/casket-ssg
+----
+
+casket is not yet on Hackage. To build from source (GHC 9.4+, Cabal 3 or
 Stack 2):
 
 [source,bash]
@@ -80,6 +93,20 @@ cd casket-ssg
 stack build                         # or: cabal build
 stack run casket-ssg -- --version   # or put the built binary on PATH
 ----
+
+The experimental https://github.com/hyperpolymath/lol[LoL] native bridge is
+an explicit compile-time option:
+
+[source,bash]
+----
+cabal build -flol-i18n --extra-lib-dirs=/path/to/liblol/lib
+----
+
+That option requires a compatible `+liblol+` (currently Zig 0.15.2) and
+compiles the Haskell FFI bridge. It does not yet activate translation or
+locale-aware rendering in the casket CLI; that product integration remains
+planned. Keeping it opt-in prevents an unused native dependency from blocking
+the core site generator while preserving a clear integration boundary.
 
 CLI:
 
@@ -146,6 +173,8 @@ code, footnotes, task lists, strikethrough, smart punctuation
 * `+a2ml+`-native typed content + the Djot core; Pandoc relegated to an
 importer
 * `+boj+` cartridge registration; `+llms.txt+` / per-page machine views
+* LoL-backed translation and locale-aware rendering through the optional
+`+lol-i18n+` native bridge
 
 == Documentation
 
@@ -172,6 +201,7 @@ cartridge.
 * GHC 9.4+ (CI builds with 9.4.8), Cabal 3.0+ or Stack 2.0+
 * Pandoc (current library dependency; see ADR-0001 for the planned move
 off it)
+* Optional LoL bridge: a compatible `+liblol+`; not required by core builds
 
 == License
 

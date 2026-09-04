@@ -1,49 +1,38 @@
 # SPDX-License-Identifier: MPL-2.0
 # This workflow is managed by gh actions-lock.
 name: Release
+
 on:
+  pull_request:
+    paths:
+      - '.github/workflows/release.yml'
+      - 'casket-ssg.cabal'
+      - 'src/**'
+      - 'README.adoc'
+      - 'LICENSE'
   push:
     tags:
       - 'v*'
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version to release (e.g., 1.0.0)'
-        required: true
-        type: string
-permissions: read-all
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   build:
-    name: Build (${{ matrix.os }}-${{ matrix.arch }})
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: linux
-            arch: x86_64
-            runner: ubuntu-latest
-          - os: linux
-            arch: aarch64
-            runner: ubuntu-24.04-arm
-          - os: darwin
-            arch: x86_64
-            runner: macos-15-intel
-          - os: darwin
-            arch: aarch64
-            runner: macos-latest
+    name: Build prebuilt Linux artifact
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v7.0.1
-      - name: Setup Haskell
-        # SHA fix 2026-05-25: previous pin (dd344bc...74e) did not exist
-        # upstream (`gh api repos/haskell-actions/setup/commits/<sha>` 422s).
-        # Use v2.11.0, matching the other CI workflows in this repo.
-        uses: haskell-actions/setup@v2.12.0
         with:
-          ghc-version: '9.8'
-          cabal-version: '3.12'
+          persist-credentials: false
+
       - name: Cache Cabal
         uses: actions/cache@v6.1.0
         with:
@@ -51,92 +40,159 @@ jobs:
             ~/.cabal/packages
             ~/.cabal/store
             dist-newstyle
-          key: ${{ runner.os }}-${{ matrix.arch }}-cabal-${{ hashFiles('*.cabal', 'cabal.project') }}
+          key: linux-x86_64-cabal-${{ hashFiles('casket-ssg.cabal') }}
           restore-keys: |
-            ${{ runner.os }}-${{ matrix.arch }}-cabal-
-      - name: Build
+            linux-x86_64-cabal-
+
+      - name: Prepare runner Haskell toolchain
         run: |
+          ghc --version
+          cabal --version
           cabal update
-          cabal build --enable-executable-static || cabal build
-      - name: Package
+
+      - name: Validate release version
+        shell: bash
         run: |
-          VERSION="${{ github.event.inputs.version || github.ref_name }}"
-          VERSION="${VERSION#v}"  # Remove leading 'v' if present
+          set -euo pipefail
+          package_version="$(awk '$1 == "version:" { print $2; exit }' casket-ssg.cabal)"
+          test -n "${package_version}"
 
-          mkdir -p dist/casket-ssg-${VERSION}
-
-          # Find and copy the binary
-          BINARY=$(find dist-newstyle -name 'casket-ssg' -type f -executable 2>/dev/null | head -1)
-          if [ -z "$BINARY" ]; then
-            # Fallback: look for Main or the module name
-            BINARY=$(find dist-newstyle -name 'Casket' -type f -executable 2>/dev/null | head -1)
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            release_version="${GITHUB_REF_NAME#v}"
+            if [[ "${release_version}" != "${package_version}" ]]; then
+              echo "::error::Tag ${GITHUB_REF_NAME} does not match cabal version ${package_version}"
+              exit 1
+            fi
           fi
 
-          if [ -n "$BINARY" ]; then
-            cp "$BINARY" dist/casket-ssg-${VERSION}/casket-ssg
-            chmod +x dist/casket-ssg-${VERSION}/casket-ssg
-          else
-            echo "::error::Could not find built binary"
-            find dist-newstyle -type f -executable
+          echo "PACKAGE_VERSION=${package_version}" >> "${GITHUB_ENV}"
+
+      - name: Build optimised core executable
+        run: |
+          cabal build exe:casket-ssg \
+            --enable-optimization=2 \
+            --flags=-lol-i18n
+
+      - name: Exercise executable and site build
+        shell: bash
+        run: |
+          set -euo pipefail
+          binary="$(cabal list-bin exe:casket-ssg \
+            --enable-optimization=2 \
+            --flags=-lol-i18n)"
+          test -x "${binary}"
+          "${binary}" --version | tee "${RUNNER_TEMP}/casket-version.txt"
+          grep -F "v${PACKAGE_VERSION}" "${RUNNER_TEMP}/casket-version.txt"
+
+          if ldd "${binary}" | grep -q 'liblol'; then
+            echo "::error::The core executable unexpectedly requires liblol"
             exit 1
           fi
 
-          # Copy documentation
-          cp README.adoc dist/casket-ssg-${VERSION}/ || cp README.md dist/casket-ssg-${VERSION}/ || true
-          cp LICENSE dist/casket-ssg-${VERSION}/ || true
+          smoke_root="${RUNNER_TEMP}/casket-smoke"
+          mkdir -p "${smoke_root}/content"
+          printf '%s\n' \
+            '---' \
+            'title: Release smoke test' \
+            '---' \
+            '# Release smoke test' \
+            '' \
+            'A real generated page.' \
+            > "${smoke_root}/content/index.md"
+          "${binary}" build "${smoke_root}/content" "${smoke_root}/site"
+          test -s "${smoke_root}/site/index.html"
+          grep -F '<h1 id="release-smoke-test">Release smoke test</h1>' \
+            "${smoke_root}/site/index.html"
 
-          # Create tarball
-          cd dist
-          ARCHIVE="casket-ssg-${{ matrix.arch }}-${{ matrix.os }}-${VERSION}.tar.gz"
-          tar -czvf "${ARCHIVE}" casket-ssg-${VERSION}
+          echo "CASKET_BINARY=${binary}" >> "${GITHUB_ENV}"
 
-          # Create checksum
-          if command -v sha256sum &>/dev/null; then
-            sha256sum "${ARCHIVE}" > "${ARCHIVE}.sha256"
-          else
-            shasum -a 256 "${ARCHIVE}" > "${ARCHIVE}.sha256"
-          fi
+      - name: Package deterministic archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          package_name="casket-ssg-${PACKAGE_VERSION}-x86_64-linux"
+          package_root="${RUNNER_TEMP}/package"
+          package_dir="${package_root}/${package_name}"
+          archive="${GITHUB_WORKSPACE}/dist/${package_name}.tar.gz"
+          mkdir -p "${package_dir}" "${GITHUB_WORKSPACE}/dist"
 
-          echo "ARCHIVE=${ARCHIVE}" >> $GITHUB_ENV
-          echo "VERSION=${VERSION}" >> $GITHUB_ENV
-      - name: Upload artifact
+          install -m 0755 "${CASKET_BINARY}" "${package_dir}/casket-ssg"
+          strip "${package_dir}/casket-ssg"
+          cp README.adoc LICENSE "${package_dir}/"
+
+          {
+            echo "casket-ssg=${PACKAGE_VERSION}"
+            echo "source-revision=${GITHUB_SHA}"
+            echo "target=x86_64-linux-gnu"
+            echo "variant=core"
+            echo "lol-i18n=disabled"
+            ghc --version
+            cabal --version | head -n 1
+            readelf -d "${package_dir}/casket-ssg" \
+              | awk '$2 == "(NEEDED)" { gsub(/[][]/, "", $5); print "needed=" $5 }'
+          } > "${package_dir}/BUILD-METADATA.txt"
+
+          source_date_epoch="$(git show -s --format=%ct HEAD)"
+          tar \
+            --sort=name \
+            --mtime="@${source_date_epoch}" \
+            --owner=0 \
+            --group=0 \
+            --numeric-owner \
+            -C "${package_root}" \
+            -cf - "${package_name}" \
+            | gzip -n > "${archive}"
+
+          archive_name="$(basename "${archive}")"
+          cd "${GITHUB_WORKSPACE}/dist"
+          sha256sum "${archive_name}" > "${archive_name}.sha256"
+          sha256sum -c "${archive_name}.sha256"
+          tar -tzf "${archive_name}"
+
+      - name: Upload workflow artifact
         uses: actions/upload-artifact@v7.0.1
         with:
-          name: casket-ssg-${{ matrix.arch }}-${{ matrix.os }}
+          name: casket-ssg-x86_64-linux
           path: |
             dist/*.tar.gz
             dist/*.sha256
+          if-no-files-found: error
+          retention-days: 7
+
   release:
-    name: Create Release
+    name: Publish immutable-tag release
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
+      attestations: write
       contents: write
       id-token: write
-      attestations: write
     steps:
-      - name: Download all artifacts
+      - name: Download built artifact
         uses: actions/download-artifact@v8.0.1
         with:
+          name: casket-ssg-x86_64-linux
           path: artifacts
-          merge-multiple: true
-      - name: List artifacts
-        run: |
-          find artifacts -type f
-      - name: Create Release
-        uses: softprops/action-gh-release@v3.0.2
-        with:
-          files: |
-            artifacts/*.tar.gz
-            artifacts/*.sha256
-          generate_release_notes: true
-          fail_on_unmatched_files: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify checksums
+        working-directory: artifacts
+        run: sha256sum -c -- ./*.sha256
+
       - name: Attest build provenance
         uses: actions/attest-build-provenance@v4.2.2
         with:
-          subject-path: |
-            artifacts/*.tar.gz
-            artifacts/*.sha256
+          subject-path: artifacts/*.tar.gz
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            artifacts/*.tar.gz \
+            artifacts/*.sha256 \
+            --repo "${GITHUB_REPOSITORY}" \
+            --verify-tag \
+            --title "Casket-SSG ${GITHUB_REF_NAME}" \
+            --generate-notes
