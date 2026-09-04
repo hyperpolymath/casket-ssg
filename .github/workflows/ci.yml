@@ -7,6 +7,7 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -14,11 +15,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7.0.1
       - name: Set up GHC
-        # SHA pinned to v2.7.10 (current at 2026-05-25). The previous pin
-        # `dd344bc1cec854a9b2f7029b98379ce6c1accc98` did not exist on the
-        # upstream repo — GitHub Actions failed to resolve it and every
-        # CI run errored before any GHC step ran. This SHA is the same
-        # one used elsewhere in this repo (sbom.yml, casket-ci.yml).
+        # The visible release tag is resolved to an immutable commit by
+        # actions.lock, and repository policy requires that locked SHA.
         uses: haskell-actions/setup@v2.12.0
         with:
           ghc-version: '9.4'
