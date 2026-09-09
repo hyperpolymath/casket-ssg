@@ -175,11 +175,20 @@ jobs:
         with:
           name: casket-ssg-x86_64-linux
           path: artifacts
-
-      - name: Verify checksums
-        working-directory: artifacts
-        run: sha256sum -c -- ./*.sha256
-
+          merge-multiple: true
+      - name: List artifacts
+        run: |
+          find artifacts -type f
+      - name: Create Release
+        uses: softprops/action-gh-release@v3.0.3
+        with:
+          files: |
+            artifacts/*.tar.gz
+            artifacts/*.sha256
+          generate_release_notes: true
+          fail_on_unmatched_files: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Attest build provenance
         uses: actions/attest-build-provenance@v4.2.2
         with:
