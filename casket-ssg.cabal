@@ -14,6 +14,11 @@ category:           Web
 build-type:         Simple
 extra-source-files: README.adoc
 
+flag lol-i18n
+    description:      Build the experimental LoL native i18n bridge (requires liblol)
+    default:          False
+    manual:           True
+
 executable casket-ssg
     main-is:          CasketGnosis.hs
     other-modules:    Gnosis.Types
@@ -22,10 +27,9 @@ executable casket-ssg
                     , Gnosis.Paxos
                     , Gnosis.SixSCM
                     , Gnosis.DAX
-                    , Gnosis.I18n
     hs-source-dirs:   src
     default-language: Haskell2010
-    ghc-options:      -Wall -O2
+    ghc-options:      -Wall
     build-depends:    base >= 4.14 && < 5
                     , containers >= 0.6
                     , text >= 1.2
@@ -34,8 +38,10 @@ executable casket-ssg
                     , filepath >= 1.4
                     , pandoc >= 3.0
                     , pandoc-types >= 1.23
-                    , text-icu >= 0.7
-  extra-libraries:    lol
+
+    if flag(lol-i18n)
+        other-modules:    Gnosis.I18n
+        extra-libraries:  lol
 
 source-repository head
     type:     git
