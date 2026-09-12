@@ -8,7 +8,7 @@ on:
       - 'v*'
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
 jobs:
   sbom:
     name: Generate Software Bill of Materials
