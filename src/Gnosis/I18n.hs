@@ -1,3 +1,4 @@
+-- SPDX-License-Identifier: MPL-2.0
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE OverloadedStrings #-}
