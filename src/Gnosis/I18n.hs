@@ -14,13 +14,10 @@ module Gnosis.I18n (
 ) where
 
 import Foreign
-import Foreign.C.Types
 import Foreign.C.String
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Text.Foreign as TF
-import System.IO.Unsafe (unsafePerformIO)
-import Foreign.Ptr (nullPtr)
 
 data LolHandleStruct
 type LolHandle = Ptr LolHandleStruct
