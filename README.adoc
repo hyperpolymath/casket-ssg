@@ -182,7 +182,7 @@ importer
 deep-dive)
 * link:docs/decisions/ADR-0001-content-engine.adoc[ADR-0001] —
 content-engine direction
-* link:CONTRIBUTING.adoc[Contributing] ·
+* link:.github/CONTRIBUTING.md[Contributing] ·
 link:GOVERNANCE.adoc[Governance]
 
 == Where it fits
