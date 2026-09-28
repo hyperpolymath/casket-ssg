@@ -18,7 +18,7 @@ jobs:
       - name: Set up GHC
         # The visible release tag is resolved to an immutable commit by
         # actions.lock, and repository policy requires that locked SHA.
-        uses: haskell-actions/setup@v2.12.0
+        uses: haskell-actions/setup@v2.12.1
         with:
           ghc-version: '9.4'
           cabal-version: '3.10'

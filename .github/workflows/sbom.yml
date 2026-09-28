@@ -19,7 +19,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v7.0.1
       - name: Setup Haskell
-        uses: haskell-actions/setup@v2.12.0
+        uses: haskell-actions/setup@v2.12.1
         with:
           ghc-version: '9.6.6'
           enable-stack: true
