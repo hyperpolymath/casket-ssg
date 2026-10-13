@@ -76,7 +76,7 @@ jobs:
           cat license-report.md
       - name: Upload license report
         # SHA fix 2026-05-25: previous pin did not exist upstream.
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: license-compliance-report
           path: license-report.md
