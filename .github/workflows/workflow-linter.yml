@@ -22,7 +22,13 @@ jobs:
           errors=0
           for f in .github/workflows/*.yml .github/workflows/*.yaml; do
             [ -f "$f" ] || continue
-            if ! head -1 "$f" | grep -q "SPDX-License-Identifier"; then
+            # Scan the first five lines, not just the first. `gh actions-lock`
+            # prepends its own "# This workflow is managed by gh actions-lock."
+            # banner above the SPDX tag, so a compliant file has the identifier
+            # on line 2. Checking only line 1 flagged all 18 workflows as
+            # missing a header they in fact carry, and `exit $errors` turned
+            # that into exit code 18 -- a red check on a clean tree.
+            if ! head -5 "$f" | grep -q "SPDX-License-Identifier"; then
               echo "ERROR: $f missing SPDX header"
               errors=$((errors + 1))
             fi
