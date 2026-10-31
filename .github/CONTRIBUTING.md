@@ -124,7 +124,7 @@ Footer: issue reference, e.g. Closes #123
 
 Every commit that reaches the default branch must be signed; a ruleset refuses
 unsigned pushes. Estate policy:
-[SIGNING-POLICY](https://github.com/hyperpolymath/standards/blob/main/docs/SIGNING-POLICY.adoc).
+[SIGNING-POLICY](https://github.com/metadatastician/standards/blob/main/docs/SIGNING-POLICY.adoc).
 
 - **People and interactive agents** sign with an SSH key registered on GitHub
   as a *signing* key (`gpg.format=ssh`, `user.signingkey=<key>.pub`,
