@@ -90,7 +90,7 @@ jobs:
         # `ea165de6abb5050e17c80995d4e2caaec6d72898` did not exist
         # upstream — GitHub Actions returned "unable to find version"
         # and every workflow run errored before any artifact was uploaded.
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: casket-ssg-${{ runner.os }}-${{ matrix.ghc }}
           path: .stack-work/install/**/bin/casket-ssg
